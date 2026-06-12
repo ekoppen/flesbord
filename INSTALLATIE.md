@@ -57,10 +57,21 @@ Op een Raspberry Pi: `pm2 start server.js --name defles && pm2 save`.
 
 ## 2. De app op je Chromecast (Google TV) zetten
 
-De kant-en-klare APK staat in `android-tv/defles-bord.apk`. Installeren kan op
-twee manieren:
+**Makkelijkst — met het installscript** (op je Mac of Linux, zelfde netwerk als de TV):
 
-**Makkelijkst — via een installer-app:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/ekoppen/flesbord/main/install-tv.sh | bash
+```
+
+Het script regelt ADB, haalt de APK van GitHub, begeleidt het koppelen met de
+TV (inclusief de koppelingscode van "Draadloze foutopsporing"), installeert de
+app en start hem. Zet vooraf eenmalig de ontwikkelaarsopties aan op de TV
+(het script legt precies uit hoe).
+
+De kant-en-klare APK staat ook los in `android-tv/defles-bord.apk`. Handmatig
+installeren kan op twee manieren:
+
+**Via een installer-app:**
 1. Installeer op de Chromecast de app **"Send files to TV"** (Play Store) en op
    je telefoon ook; stuur `defles-bord.apk` naar de TV en open hem daar.
    (Sta "onbekende bronnen" toe als de TV erom vraagt.)
