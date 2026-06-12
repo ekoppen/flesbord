@@ -68,6 +68,13 @@ wait_device() { # $1 = max seconden wachten
       note "Bevestig de popup 'USB-foutopsporing toestaan?' op de TV (vink 'altijd toestaan' aan)."
       hinted=1
     fi
+    # 'offline' komt voor bij een oude, hangende draadloze verbinding: forceer herverbinden
+    adb reconnect offline >/dev/null 2>&1 || true
+    # laat elke ~10 s zien wat adb ziet, zodat duidelijk is waar het op wacht
+    if [ $(( i % 5 )) -eq 0 ]; then
+      echo "    status volgens 'adb devices':"
+      adb devices -l | sed -n '2,$p' | sed 's/^/      /'
+    fi
     sleep 2
   done
   return 1
@@ -105,13 +112,18 @@ if [ -z "$DEV" ]; then
     echo "    staat het gewone verbindingsadres (andere poort dan het koppel-adres)."
     CONN_ADDR="$(ask "Verbindingsadres (ip:poort):")"
   fi
-  adb connect "$CONN_ADDR" >/dev/null 2>&1 || true
+  echo "    adb zegt: $(adb connect "$CONN_ADDR" 2>&1)"
 fi
 
 # Wachten tot er een geautoriseerd apparaat is (popup op de TV)
 if [ -z "$DEV" ]; then
   msg "Wachten op toestemming van de TV…"
-  wait_device 60 || err "Geen geautoriseerde verbinding. Controleer de popup op de TV en draai het script opnieuw."
+  wait_device 60 || {
+    echo
+    echo "    Dit ziet adb op dit moment:"
+    adb devices -l | sed 's/^/      /'
+    err "Geen geautoriseerde verbinding gekregen. Tip: zet 'Draadloze foutopsporing' op de TV even UIT en weer AAN, en draai het script opnieuw."
+  }
 fi
 msg "Verbonden met: $DEV"
 
