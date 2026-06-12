@@ -1,0 +1,6 @@
+.DS_Store
+.claude/
+app/data/
+android-tv/build/
+android-tv/*.apk.idsig
+data/

@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@400;700&amp;family=Shadows+Into+Light+Two&amp;family=Patrick+Hand&amp;display=swap" rel="stylesheet">
+  <style>
+    html { color-scheme: dark; }
+    html, body { margin: 0; padding: 0; background: #2c3e35; }
+    input::placeholder, textarea::placeholder { color: rgba(242,236,220,0.38); }
+  </style>
+</helmet>
+<div data-screen-label="Beheer" style="min-height: 100vh; background: #2c3e35; background-image: radial-gradient(ellipse 600px 380px at 18% 12%, rgba(244,238,222,0.05), transparent 70%), radial-gradient(ellipse 700px 420px at 82% 50%, rgba(244,238,222,0.04), transparent 70%), radial-gradient(ellipse 500px 300px at 30% 90%, rgba(244,238,222,0.035), transparent 70%); font-family: 'Patrick Hand', cursive; color: #f2ecdc; padding: 40px 24px 80px; box-sizing: border-box;">
+  <div style="max-width: 1060px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px;">
+
+    <!-- Kop -->
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 0 4px 8px;">
+      <div>
+        <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 28px; color: #f4a259; line-height: 1; transform: rotate(-1.5deg);">beheerscherm</div>
+        <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 64px; line-height: 0.95; letter-spacing: 0.04em; text-shadow: 0 0 14px rgba(242,236,220,0.18);">DE FLES</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 16px; padding-bottom: 6px;">
+        <sc-if value="{{ justSaved }}" hint-placeholder-val="{{ false }}">
+          <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 20px; color: #8fd6a0;">opgeslagen ✓</div>
+        </sc-if>
+        <div style="display: flex; align-items: center; gap: 9px; border: 2px solid rgba(242,236,220,0.3); border-radius: 999px; padding: 8px 16px;">
+          <div style="width: 9px; height: 9px; border-radius: 999px; background: #8fd6a0;"></div>
+          <div style="font-size: 15px; color: rgba(242,236,220,0.75);">Live — wijzigingen verschijnen direct op TV</div>
+        </div>
+        <a href="De Fles TV Krijtbord.dc.html" target="_blank" style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 24px; letter-spacing: 0.06em; color: #2c3e35; background: #f2ecdc; border-radius: 999px; padding: 8px 22px; text-decoration: none; box-shadow: 0 6px 16px rgba(0,0,0,0.3); transform: rotate(-0.6deg); display: inline-block;">OPEN TV-SCHERM ↗</a>
+      </div>
+    </div>
+
+    <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+
+      <!-- Rij: scherm + weer -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div style="border: 2px solid rgba(242,236,220,0.25); background: rgba(15,24,20,0.18); border-radius: 14px; padding: 24px 28px;">
+          <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 33px; letter-spacing: 0.06em; margin-bottom: 14px;">SCHERMINDELING</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <sc-for list="{{ variantTiles }}" as="v" hint-placeholder-count="2">
+              <button onClick="{{ v.onClick }}" style="text-align: left; cursor: pointer; background: {{ v.bg }}; border: 2px solid {{ v.border }}; border-radius: 12px; padding: 14px 18px; font-family: 'Patrick Hand', cursive;">
+                <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 26px; letter-spacing: 0.04em; color: #f2ecdc;">{{ v.label }}</div>
+                <div style="font-size: 15px; color: rgba(242,236,220,0.6); margin-top: 2px; line-height: 1.35;">{{ v.desc }}</div>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="border: 2px solid rgba(242,236,220,0.25); background: rgba(15,24,20,0.18); border-radius: 14px; padding: 24px 28px;">
+          <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 33px; letter-spacing: 0.06em; margin-bottom: 14px;">WEER</div>
+          <div style="font-size: 14px; letter-spacing: 0.18em; color: rgba(242,236,220,0.55); margin-bottom: 6px;">PLAATS</div>
+          <div style="display: flex; gap: 10px;">
+            <input value="{{ weatherQuery }}" onChange="{{ onWeatherQuery }}" onKeyDown="{{ onWeatherKey }}" placeholder="bv. Apeldoorn" style="flex: 1; border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box;" style-focus="border-color: #f4a259;">
+            <button onClick="{{ onWeatherSearch }}" style="cursor: pointer; border: none; background: #f4a259; color: #2c3e35; font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 22px; letter-spacing: 0.06em; border-radius: 10px; padding: 8px 20px;">ZOEK</button>
+          </div>
+          <div style="font-size: 16px; color: rgba(242,236,220,0.75); margin-top: 12px;">Huidige plaats: <b style="color: #f2ecdc;">{{ placeName }}</b></div>
+          <sc-if value="{{ hasWeatherStatus }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size: 15px; color: #f4a259; margin-top: 6px;">{{ weatherStatus }}</div>
+          </sc-if>
+        </div>
+      </div>
+
+      <!-- Rij: teksten + muziek -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
+        <div style="border: 2px solid rgba(242,236,220,0.25); background: rgba(15,24,20,0.18); border-radius: 14px; padding: 24px 28px;">
+          <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 33px; letter-spacing: 0.06em; margin-bottom: 14px;">TEKSTEN</div>
+          <div style="font-size: 14px; letter-spacing: 0.18em; color: rgba(242,236,220,0.55); margin-bottom: 6px;">WELKOMSTREGEL (boven het logo)</div>
+          <input value="{{ welkom }}" onChange="{{ onWelkom }}" style="width: 100%; border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box;" style-focus="border-color: #f4a259;">
+          <div style="font-size: 14px; letter-spacing: 0.18em; color: rgba(242,236,220,0.55); margin: 16px 0 6px;">MEDEDELING (leeg = verbergen)</div>
+          <textarea value="{{ mededeling }}" onChange="{{ onMededeling }}" rows="3" style="width: 100%; border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box; resize: vertical;" style-focus="border-color: #f4a259;"></textarea>
+        </div>
+
+        <div style="border: 2px solid rgba(242,236,220,0.25); background: rgba(15,24,20,0.18); border-radius: 14px; padding: 24px 28px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+            <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 33px; letter-spacing: 0.06em;">MUZIEK</div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="font-size: 14px; color: rgba(242,236,220,0.55);">tonen op TV</div>
+              <button onClick="{{ onToggleMusic }}" aria-label="Muziek tonen" style="cursor: pointer; border: none; width: 52px; height: 30px; border-radius: 999px; background: {{ musicToggleBg }}; position: relative; padding: 0;">
+                <div style="position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 999px; background: #f2ecdc; box-shadow: 0 1px 3px rgba(0,0,0,0.35); transform: {{ musicToggleKnob }}; transition: transform 0.2s ease;"></div>
+              </button>
+            </div>
+          </div>
+
+          <div style="font-size: 14px; letter-spacing: 0.18em; color: rgba(242,236,220,0.55); margin-bottom: 6px;">BRON</div>
+          <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+            <sc-for list="{{ modeTiles }}" as="mt" hint-placeholder-count="3">
+              <button onClick="{{ mt.onClick }}" style="flex: 1; cursor: pointer; background: {{ mt.bg }}; border: 2px solid {{ mt.border }}; border-radius: 999px; padding: 7px 10px; font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 21px; letter-spacing: 0.05em; color: #f2ecdc;">{{ mt.label }}</button>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ modeHandmatig }}" hint-placeholder-val="{{ true }}">
+            <div style="display: grid; grid-template-columns: 140px 1fr; gap: 12px;">
+              <div>
+                <div style="font-size: 14px; letter-spacing: 0.18em; color: rgba(242,236,220,0.55); margin-bottom: 6px;">LABEL</div>
+                <select value="{{ musicSource }}" onChange="{{ onMusicSource }}" style="width: 100%; border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 12px; font-family: 'Patrick Hand', cursive; font-size: 16px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box;">
+                  <option value="Spotify">Spotify</option>
+                  <option value="Volumio">Volumio</option>
+                  <option value="Vinyl">Vinyl</option>
+                </select>
+              </div>
+              <div>
+                <div style="font-size: 14px; letter-spacing: 0.18em; color: rgba(242,236,220,0.55); margin-bottom: 6px;">NUMMER</div>
+                <input value="{{ musicTrack }}" onChange="{{ onMusicTrack }}" style="width: 100%; border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box;" style-focus="border-color: #f4a259;">
+              </div>
+            </div>
+            <div style="font-size: 14px; letter-spacing: 0.18em; color: rgba(242,236,220,0.55); margin: 16px 0 6px;">ARTIEST</div>
+            <input value="{{ musicArtist }}" onChange="{{ onMusicArtist }}" style="width: 100%; border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box;" style-focus="border-color: #f4a259;">
+          </sc-if>
+
+          <sc-if value="{{ modeVolumio }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size: 14px; letter-spacing: 0.18em; color: rgba(242,236,220,0.55); margin-bottom: 6px;">VOLUMIO-ADRES (IP of hostnaam)</div>
+            <div style="display: flex; gap: 10px;">
+              <input value="{{ volumioHost }}" onChange="{{ onVolumioHost }}" placeholder="bv. volumio.local of 192.168.1.40" style="flex: 1; border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box;" style-focus="border-color: #f4a259;">
+              <button onClick="{{ onVolumioTest }}" style="cursor: pointer; border: none; background: #f4a259; color: #2c3e35; font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 22px; letter-spacing: 0.06em; border-radius: 10px; padding: 8px 20px;">TEST</button>
+            </div>
+            <sc-if value="{{ hasVolumioStatus }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size: 15px; color: #f4a259; margin-top: 10px;">{{ volumioStatus }}</div>
+            </sc-if>
+            <div style="font-size: 14px; color: rgba(242,236,220,0.5); margin-top: 12px; line-height: 1.5;">De TV vraagt elke 5 seconden via de Volumio-API op wat er speelt. TV en Volumio moeten op hetzelfde netwerk zitten.</div>
+          </sc-if>
+
+          <sc-if value="{{ modeSpotify }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ spotifyIsConnected }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 2px dashed rgba(143,214,160,0.6); border-radius: 10px; padding: 12px 18px;">
+                <div style="font-size: 17px; color: #8fd6a0;">Verbonden met Spotify ✓ — de TV toont automatisch wat er speelt.</div>
+                <button onClick="{{ onSpotifyDisconnect }}" style="cursor: pointer; border: 2px solid rgba(242,236,220,0.3); background: transparent; border-radius: 999px; padding: 5px 14px; font-family: 'Patrick Hand', cursive; font-size: 14px; color: rgba(242,236,220,0.7); flex-shrink: 0;" style-hover="color: #f4a259; border-color: #f4a259;">Ontkoppelen</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ spotifyNotConnected }}" hint-placeholder-val="{{ true }}">
+              <div style="font-size: 14px; letter-spacing: 0.18em; color: rgba(242,236,220,0.55); margin-bottom: 6px;">SPOTIFY CLIENT ID</div>
+              <input value="{{ spotifyClientId }}" onChange="{{ onSpotifyClientId }}" placeholder="uit je Spotify Developer Dashboard" style="width: 100%; border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box;" style-focus="border-color: #f4a259;">
+              <div style="font-size: 14px; letter-spacing: 0.18em; color: rgba(242,236,220,0.55); margin: 14px 0 6px;">REDIRECT URI (toevoegen in het dashboard)</div>
+              <div style="border: 2px dashed rgba(242,236,220,0.3); border-radius: 10px; padding: 9px 14px; font-size: 14px; color: rgba(242,236,220,0.75); word-break: break-all; user-select: all;">{{ spotifyRedirect }}</div>
+              <button onClick="{{ onSpotifyConnect }}" style="margin-top: 14px; cursor: pointer; border: none; background: #f2ecdc; color: #2c3e35; font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 24px; letter-spacing: 0.06em; border-radius: 999px; padding: 8px 24px; box-shadow: 0 6px 16px rgba(0,0,0,0.3);">VERBIND MET SPOTIFY ↗</button>
+              <div style="font-size: 14px; color: rgba(242,236,220,0.5); margin-top: 12px; line-height: 1.5;">Maak gratis een app aan op developer.spotify.com, plak hier de Client ID, voeg de redirect URI toe en log in. Werkt met elk Spotify-account.</div>
+            </sc-if>
+            <sc-if value="{{ hasSpotifyStatus }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size: 15px; color: #f4a259; margin-top: 10px;">{{ spotifyStatus }}</div>
+            </sc-if>
+          </sc-if>
+        </div>
+      </div>
+
+      <!-- Op de tap -->
+      <div style="border: 2px solid rgba(242,236,220,0.25); background: rgba(15,24,20,0.18); border-radius: 14px; padding: 24px 28px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px;">
+          <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 33px; letter-spacing: 0.06em;">OP DE TAP</div>
+          <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 18px; color: rgba(242,236,220,0.55);">vat-niveau bepaalt het balkje op TV</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <sc-for list="{{ tapRows }}" as="t" hint-placeholder-count="3">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 110px 170px 36px; gap: 10px; align-items: center;">
+              <input value="{{ t.name }}" onChange="{{ t.onName }}" placeholder="Naam" style="border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box; min-width: 0;" style-focus="border-color: #f4a259;">
+              <input value="{{ t.style }}" onChange="{{ t.onStyle }}" placeholder="Stijl · %" style="border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box; min-width: 0;" style-focus="border-color: #f4a259;">
+              <input value="{{ t.price }}" onChange="{{ t.onPrice }}" placeholder="€ 0,00" style="border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box; min-width: 0;" style-focus="border-color: #f4a259;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <input type="range" min="0" max="100" value="{{ t.level }}" onChange="{{ t.onLevel }}" style="flex: 1; accent-color: #f4a259;">
+                <div style="width: 38px; font-size: 15px; color: rgba(242,236,220,0.75); text-align: right;">{{ t.levelLabel }}</div>
+              </div>
+              <button onClick="{{ t.onRemove }}" aria-label="Verwijder" style="cursor: pointer; width: 36px; height: 36px; border-radius: 10px; border: 2px solid rgba(242,236,220,0.25); background: transparent; color: rgba(242,236,220,0.6); font-size: 15px; line-height: 1;" style-hover="color: #f4a259; border-color: #f4a259;">✕</button>
+            </div>
+          </sc-for>
+        </div>
+        <button onClick="{{ onAddTap }}" style="margin-top: 14px; cursor: pointer; border: 2px dashed rgba(242,236,220,0.35); background: transparent; border-radius: 10px; padding: 8px 18px; font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 22px; letter-spacing: 0.06em; color: rgba(242,236,220,0.7);" style-hover="color: #f4a259; border-color: #f4a259;">+ BIER TOEVOEGEN</button>
+      </div>
+
+      <!-- Voorraad -->
+      <div style="border: 2px solid rgba(242,236,220,0.25); background: rgba(15,24,20,0.18); border-radius: 14px; padding: 24px 28px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px;">
+          <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 33px; letter-spacing: 0.06em;">VOORRAAD</div>
+          <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 18px; color: rgba(242,236,220,0.55);">bij 2 of minder kleurt het aantal oranje op TV</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px;">
+          <sc-for list="{{ stockRows }}" as="s" hint-placeholder-count="8">
+            <div style="display: grid; grid-template-columns: 1fr 110px 128px 36px; gap: 10px; align-items: center;">
+              <input value="{{ s.name }}" onChange="{{ s.onName }}" placeholder="Naam" style="border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box; min-width: 0;" style-focus="border-color: #f4a259;">
+              <select value="{{ s.cat }}" onChange="{{ s.onCat }}" style="border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 8px; font-family: 'Patrick Hand', cursive; font-size: 15px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box;">
+                <option value="Bier">Bier</option>
+                <option value="Fris">Fris</option>
+                <option value="Wijn">Wijn</option>
+                <option value="Sterk">Sterk</option>
+                <option value="Overig">Overig</option>
+              </select>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <button onClick="{{ s.onMinus }}" style="cursor: pointer; width: 32px; height: 36px; border-radius: 10px; border: 2px solid rgba(242,236,220,0.3); background: transparent; color: #f2ecdc; font-size: 16px;">−</button>
+                <div style="flex: 1; text-align: center; font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 26px;">{{ s.qty }}</div>
+                <button onClick="{{ s.onPlus }}" style="cursor: pointer; width: 32px; height: 36px; border-radius: 10px; border: 2px solid rgba(242,236,220,0.3); background: transparent; color: #f2ecdc; font-size: 16px;">+</button>
+              </div>
+              <button onClick="{{ s.onRemove }}" aria-label="Verwijder" style="cursor: pointer; width: 36px; height: 36px; border-radius: 10px; border: 2px solid rgba(242,236,220,0.25); background: transparent; color: rgba(242,236,220,0.6); font-size: 15px; line-height: 1;" style-hover="color: #f4a259; border-color: #f4a259;">✕</button>
+            </div>
+          </sc-for>
+        </div>
+        <button onClick="{{ onAddStock }}" style="margin-top: 14px; cursor: pointer; border: 2px dashed rgba(242,236,220,0.35); background: transparent; border-radius: 10px; padding: 8px 18px; font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 22px; letter-spacing: 0.06em; color: rgba(242,236,220,0.7);" style-hover="color: #f4a259; border-color: #f4a259;">+ ARTIKEL TOEVOEGEN</button>
+      </div>
+
+      <!-- Foto's -->
+      <div style="border: 2px solid rgba(242,236,220,0.25); background: rgba(15,24,20,0.18); border-radius: 14px; padding: 24px 28px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px;">
+          <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 33px; letter-spacing: 0.06em;">FOTO’S</div>
+          <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 18px; color: rgba(242,236,220,0.55);">{{ photoCount }} van max. 12 · foto’s worden verkleind opgeslagen</div>
+        </div>
+        <input type="file" accept="image/*" multiple ref="{{ fileRef }}" onChange="{{ onFiles }}" style="display: none;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px;">
+          <sc-for list="{{ photoRows }}" as="p" hint-placeholder-count="3">
+            <div style="background: #faf6ec; padding: 8px 8px 4px; box-shadow: 0 6px 16px rgba(0,0,0,0.35); transform: rotate(-0.8deg);">
+              <div style="position: relative; height: 110px; background: #ddd6c6;">
+                <img src="{{ p.src }}" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;">
+                <button onClick="{{ p.onRemove }}" aria-label="Verwijder foto" style="position: absolute; top: 6px; right: 6px; cursor: pointer; width: 28px; height: 28px; border-radius: 999px; border: none; background: rgba(28,24,18,0.65); color: #f2ecdc; font-size: 13px; line-height: 1;">✕</button>
+              </div>
+              <input value="{{ p.caption }}" onChange="{{ p.onCaption }}" placeholder="bijschrift…" style="width: 100%; border: none; padding: 7px 6px 5px; font-family: 'Shadows Into Light Two', cursive; font-size: 17px; background: transparent; color: #4a4337; outline: none; box-sizing: border-box;">
+            </div>
+          </sc-for>
+          <button onClick="{{ onPickFiles }}" style="cursor: pointer; min-height: 150px; border: 2px dashed rgba(242,236,220,0.35); background: transparent; border-radius: 12px; font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 24px; letter-spacing: 0.06em; color: rgba(242,236,220,0.7);" style-hover="color: #f4a259; border-color: #f4a259;">+ FOTO’S UPLOADEN</button>
+        </div>
+        <sc-if value="{{ hasPhotoStatus }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size: 15px; color: #f4a259; margin-top: 10px;">{{ photoStatus }}</div>
+        </sc-if>
+        <div style="font-size: 14px; color: rgba(242,236,220,0.5); margin-top: 12px;">Insturen door gasten (bv. via Discord) kan later als koppeling worden toegevoegd.</div>
+      </div>
+
+      <!-- WK-thema -->
+      <div style="border: 2px solid rgba(242,236,220,0.25); background: rgba(15,24,20,0.18); border-radius: 14px; padding: 24px 28px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+          <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 33px; letter-spacing: 0.06em;">THEMA — WK VOETBAL</div>
+          <button onClick="{{ onToggleTheme }}" aria-label="Thema tonen" style="cursor: pointer; border: none; width: 52px; height: 30px; border-radius: 999px; background: {{ themeToggleBg }}; position: relative; padding: 0;">
+            <div style="position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 999px; background: #f2ecdc; box-shadow: 0 1px 3px rgba(0,0,0,0.35); transform: {{ themeToggleKnob }}; transition: transform 0.2s ease;"></div>
+          </button>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+          <div>
+            <div style="font-size: 14px; letter-spacing: 0.18em; color: rgba(242,236,220,0.55); margin-bottom: 6px;">TITEL</div>
+            <input value="{{ themeTitle }}" onChange="{{ onThemeTitle }}" style="width: 100%; border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box;" style-focus="border-color: #f4a259;">
+          </div>
+          <div>
+            <div style="font-size: 14px; letter-spacing: 0.18em; color: rgba(242,236,220,0.55); margin-bottom: 6px;">ONDERTITEL</div>
+            <input value="{{ themeSub }}" onChange="{{ onThemeSub }}" style="width: 100%; border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box;" style-focus="border-color: #f4a259;">
+          </div>
+        </div>
+
+        <div style="font-size: 14px; letter-spacing: 0.18em; color: rgba(242,236,220,0.55); margin-bottom: 8px;">SCHEMA &amp; STAND VIA API — TheSportsDB</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1.4fr; gap: 12px;">
+          <div>
+            <div style="font-size: 14px; letter-spacing: 0.18em; color: rgba(242,236,220,0.55); margin-bottom: 6px;">API-SLEUTEL</div>
+            <input value="{{ apiKey }}" onChange="{{ onApiKey }}" placeholder="123" style="width: 100%; border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box;" style-focus="border-color: #f4a259;">
+          </div>
+          <div>
+            <div style="font-size: 14px; letter-spacing: 0.18em; color: rgba(242,236,220,0.55); margin-bottom: 6px;">COMPETITIE-ID</div>
+            <input value="{{ apiLeague }}" onChange="{{ onApiLeague }}" placeholder="4429" style="width: 100%; border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box;" style-focus="border-color: #f4a259;">
+          </div>
+          <div>
+            <div style="font-size: 14px; letter-spacing: 0.18em; color: rgba(242,236,220,0.55); margin-bottom: 6px;">SEIZOEN</div>
+            <input value="{{ apiSeason }}" onChange="{{ onApiSeason }}" placeholder="2026" style="width: 100%; border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box;" style-focus="border-color: #f4a259;">
+          </div>
+          <div>
+            <div style="font-size: 14px; letter-spacing: 0.18em; color: rgba(242,236,220,0.55); margin-bottom: 6px;">TEAMFILTER (leeg = alles)</div>
+            <input value="{{ apiTeam }}" onChange="{{ onApiTeam }}" placeholder="bv. Netherlands" style="width: 100%; border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box;" style-focus="border-color: #f4a259;">
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px; margin-top: 14px;">
+          <button onClick="{{ onWkSync }}" style="cursor: pointer; border: none; background: #f4a259; color: #2c3e35; font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 24px; letter-spacing: 0.06em; border-radius: 999px; padding: 8px 24px; box-shadow: 0 6px 16px rgba(0,0,0,0.3);">NU OPHALEN</button>
+          <sc-if value="{{ hasWkStatus }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size: 15px; color: #f4a259;">{{ wkStatus }}</div>
+          </sc-if>
+          <div style="margin-left: auto; font-size: 14px; color: rgba(242,236,220,0.5);">Laatst opgehaald: {{ lastSyncStr }}</div>
+        </div>
+        <div style="font-size: 14px; color: rgba(242,236,220,0.5); margin-top: 10px; line-height: 1.5;">Gratis sleutel “123” · competitie 4429 = FIFA World Cup · teamnamen in het Engels (bv. “Netherlands”). De TV ververst het schema zelf elk half uur.</div>
+
+        <div style="display: grid; grid-template-columns: 1fr 320px; gap: 28px; margin-top: 18px;">
+          <div>
+            <div style="font-size: 14px; letter-spacing: 0.18em; color: rgba(242,236,220,0.55); margin-bottom: 6px;">OPGEHAALD SCHEMA</div>
+            <sc-for list="{{ previewMatches }}" as="pm" hint-placeholder-count="3">
+              <div style="display: flex; align-items: center; gap: 14px; padding: 7px 2px; border-bottom: 1px dashed rgba(242,236,220,0.18);">
+                <div style="width: 130px; font-size: 15px; color: rgba(242,236,220,0.55); flex-shrink: 0;">{{ pm.when }}</div>
+                <div style="flex: 1; font-size: 17px; color: #f2ecdc; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ pm.teams }}</div>
+                <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 24px; color: #f4a259;">{{ pm.right }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div>
+            <div style="font-size: 14px; letter-spacing: 0.18em; color: rgba(242,236,220,0.55); margin-bottom: 6px;">STAND</div>
+            <sc-for list="{{ previewStandings }}" as="ps" hint-placeholder-count="4">
+              <div style="display: flex; align-items: center; gap: 12px; padding: 6px 2px; border-bottom: 1px dashed rgba(242,236,220,0.18); font-size: 16px;">
+                <div style="width: 20px; color: rgba(242,236,220,0.5);">{{ ps.pos }}</div>
+                <div style="flex: 1; color: #f2ecdc;">{{ ps.team }}</div>
+                <div style="width: 28px; text-align: right; color: rgba(242,236,220,0.6);">{{ ps.g }}</div>
+                <div style="width: 28px; text-align: right; font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 22px; color: #f4a259;">{{ ps.pts }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <!-- Onderaan -->
+      <div style="display: flex; justify-content: flex-end; padding: 4px;">
+        <button onClick="{{ onReset }}" style="cursor: pointer; border: 2px solid rgba(242,236,220,0.3); background: transparent; border-radius: 999px; padding: 7px 18px; font-family: 'Patrick Hand', cursive; font-size: 15px; color: rgba(242,236,220,0.6);" style-hover="color: #f4a259; border-color: #f4a259;">Terug naar voorbeelddata</button>
+      </div>
+
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { data: null, weatherQuery: '', weatherStatus: '', photoStatus: '', volumioStatus: '', spotifyStatus: '', spotifyTick: 0, wkStatus: '', savedAt: 0 };
+  fileRef = React.createRef();
+
+  async componentDidMount() {
+    this.mod = await import('./defles-data.js');
+    this.setState({ data: this.mod.loadState() });
+    this.unwatch = this.mod.watchState((d) => this.setState({ data: d }));
+    // Terugkeer van Spotify-login afhandelen (?code=...)
+    if (new URLSearchParams(location.search).get('code')) {
+      this.setState({ spotifyStatus: 'Verbinden met Spotify…' });
+      try {
+        const ok = await this.mod.spotifyHandleRedirect();
+        this.setState({ spotifyStatus: ok ? '' : 'Verbinden mislukt — probeer opnieuw.', spotifyTick: this.state.spotifyTick + 1 });
+      } catch (e) {
+        this.setState({ spotifyStatus: 'Verbinden mislukt — controleer Client ID en redirect URI.' });
+      }
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.unwatch) this.unwatch();
+    clearTimeout(this._flashT);
+  }
+
+  mutate(fn) {
+    this.setState((s) => {
+      const d = structuredClone(s.data);
+      fn(d);
+      this.mod.saveState(d);
+      return { data: d, savedAt: Date.now() };
+    });
+    clearTimeout(this._flashT);
+    this._flashT = setTimeout(() => this.setState({ savedAt: 0 }), 1800);
+  }
+
+  async searchWeather() {
+    const q = this.state.weatherQuery.trim();
+    if (!q) return;
+    this.setState({ weatherStatus: 'Zoeken…' });
+    try {
+      const hit = await this.mod.geocodePlace(q);
+      if (!hit) { this.setState({ weatherStatus: 'Plaats niet gevonden.' }); return; }
+      this.mutate((d) => { d.weatherPlace = hit; });
+      this.setState({ weatherStatus: '', weatherQuery: '' });
+    } catch (e) {
+      this.setState({ weatherStatus: 'Zoeken mislukt — controleer de internetverbinding.' });
+    }
+  }
+
+  async testVolumio() {
+    const host = this.state.data.music.volumioHost;
+    this.setState({ volumioStatus: 'Verbinding testen…' });
+    try {
+      const m = await this.mod.fetchVolumioState(host);
+      this.setState({ volumioStatus: m.track ? 'Verbonden ✓ — nu: ' + m.track + (m.artist ? ' — ' + m.artist : '') : 'Verbonden ✓ — er speelt nu niets.' });
+    } catch (e) {
+      this.setState({ volumioStatus: 'Geen verbinding. Controleer het adres en of je op hetzelfde netwerk zit.' });
+    }
+  }
+
+  async syncWk() {
+    this.setState({ wkStatus: 'Schema ophalen…' });
+    try {
+      const r = await this.mod.fetchWkSchedule(this.state.data.theme.api);
+      if (!r.matches.length) {
+        this.setState({ wkStatus: 'Geen wedstrijden gevonden — controleer competitie-ID, seizoen en teamfilter.' });
+        return;
+      }
+      this.mutate((d) => {
+        d.theme.matches = r.matches;
+        if (r.standings.length) d.theme.standings = r.standings;
+        d.theme.lastSync = Date.now();
+      });
+      this.setState({ wkStatus: r.matches.length + ' wedstrijden opgehaald ✓' + (r.standings.length ? ' · stand bijgewerkt' : ' · geen stand beschikbaar') });
+    } catch (e) {
+      this.setState({ wkStatus: 'Ophalen mislukt — controleer de API-sleutel en internetverbinding.' });
+    }
+  }
+
+  async addFiles(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    const room = 12 - this.state.data.photos.length;
+    if (room <= 0) { this.setState({ photoStatus: 'Maximaal 12 foto\u2019s — verwijder er eerst een paar.' }); return; }
+    this.setState({ photoStatus: 'Bezig met verwerken…' });
+    const newPhotos = [];
+    for (const f of files.slice(0, room)) {
+      try {
+        const url = URL.createObjectURL(f);
+        const img = await new Promise((res, rej) => {
+          const i = new Image();
+          i.onload = () => res(i); i.onerror = rej; i.src = url;
+        });
+        const maxSide = 1280;
+        const ratio = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const cw = Math.round(img.width * ratio), ch = Math.round(img.height * ratio);
+        const cv = document.createElement('canvas');
+        cv.width = cw; cv.height = ch;
+        cv.getContext('2d').drawImage(img, 0, 0, cw, ch);
+        URL.revokeObjectURL(url);
+        newPhotos.push({ id: this.mod.uid(), src: cv.toDataURL('image/jpeg', 0.72), caption: '' });
+      } catch (e) { /* sla onleesbaar bestand over */ }
+    }
+    try {
+      this.mutate((d) => { d.photos = d.photos.concat(newPhotos); });
+      this.setState({ photoStatus: '' });
+    } catch (e) {
+      this.setState({ photoStatus: 'Opslag vol — verwijder eerst wat foto\u2019s.' });
+    }
+  }
+
+  renderVals() {
+    const d = this.state.data;
+    if (!d) return { ready: false, justSaved: false };
+    const mod = this.mod;
+    const mut = (fn) => this.mutate(fn);
+
+    const variantTiles = [
+      { key: 'raster', label: 'VAST RASTER', desc: 'Alles tegelijk in beeld: klok, weer, foto, tap en WK.' },
+      { key: 'roterend', label: 'ROTEREND VLAK', desc: 'Vaste balk boven; groot vlak wisselt tussen foto\u2019s, tap, WK en voorraad.' }
+    ].map((v) => ({
+      ...v,
+      bg: d.variant === v.key ? 'rgba(244,162,89,0.14)' : 'transparent',
+      border: d.variant === v.key ? '#f4a259' : 'rgba(242,236,220,0.3)',
+      onClick: () => mut((x) => { x.variant = v.key; })
+    }));
+
+    const mode = d.music.mode || 'handmatig';
+    const modeTiles = [
+      { key: 'handmatig', label: 'HANDMATIG' },
+      { key: 'volumio', label: 'VOLUMIO' },
+      { key: 'spotify', label: 'SPOTIFY' }
+    ].map((m) => ({
+      ...m,
+      bg: mode === m.key ? 'rgba(244,162,89,0.14)' : 'transparent',
+      border: mode === m.key ? '#f4a259' : 'rgba(242,236,220,0.3)',
+      onClick: () => mut((x) => { x.music.mode = m.key; })
+    }));
+
+    const spotifyConnected = mod.spotifyConnected();
+
+    const tapRows = d.taps.map((t, i) => ({
+      ...t,
+      levelLabel: (t.level || 0) + '%',
+      onName: (e) => mut((x) => { x.taps[i].name = e.target.value; }),
+      onStyle: (e) => mut((x) => { x.taps[i].style = e.target.value; }),
+      onPrice: (e) => mut((x) => { x.taps[i].price = e.target.value; }),
+      onLevel: (e) => mut((x) => { x.taps[i].level = Number(e.target.value); }),
+      onRemove: () => mut((x) => { x.taps.splice(i, 1); })
+    }));
+
+    const stockRows = d.stock.map((s, i) => ({
+      ...s,
+      onName: (e) => mut((x) => { x.stock[i].name = e.target.value; }),
+      onCat: (e) => mut((x) => { x.stock[i].cat = e.target.value; }),
+      onMinus: () => mut((x) => { x.stock[i].qty = Math.max(0, Number(x.stock[i].qty) - 1); }),
+      onPlus: () => mut((x) => { x.stock[i].qty = Number(x.stock[i].qty) + 1; }),
+      onRemove: () => mut((x) => { x.stock.splice(i, 1); })
+    }));
+
+    const photoRows = d.photos.map((p, i) => ({
+      ...p,
+      onCaption: (e) => mut((x) => { x.photos[i].caption = e.target.value; }),
+      onRemove: () => mut((x) => { x.photos.splice(i, 1); })
+    }));
+
+    const matchRows = d.theme.matches.map((m, i) => ({
+      ...m,
+      onDate: (e) => mut((x) => { x.theme.matches[i].date = e.target.value; }),
+      onTime: (e) => mut((x) => { x.theme.matches[i].time = e.target.value; }),
+      onHome: (e) => mut((x) => { x.theme.matches[i].home = e.target.value; }),
+      onAway: (e) => mut((x) => { x.theme.matches[i].away = e.target.value; }),
+      onScore: (e) => mut((x) => { x.theme.matches[i].score = e.target.value; }),
+      onRemove: () => mut((x) => { x.theme.matches.splice(i, 1); })
+    }));
+
+    const standingRows = d.theme.standings.map((s, i) => ({
+      ...s, pos: i + 1,
+      onTeam: (e) => mut((x) => { x.theme.standings[i].team = e.target.value; }),
+      onG: (e) => mut((x) => { x.theme.standings[i].g = Number(e.target.value); }),
+      onPts: (e) => mut((x) => { x.theme.standings[i].pts = Number(e.target.value); }),
+      onRemove: () => mut((x) => { x.theme.standings.splice(i, 1); })
+    }));
+
+    return {
+      ready: true,
+      justSaved: this.state.savedAt > 0,
+      variantTiles,
+      // Weer
+      weatherQuery: this.state.weatherQuery,
+      onWeatherQuery: (e) => this.setState({ weatherQuery: e.target.value }),
+      onWeatherKey: (e) => { if (e.key === 'Enter') this.searchWeather(); },
+      onWeatherSearch: () => this.searchWeather(),
+      placeName: d.weatherPlace.name,
+      weatherStatus: this.state.weatherStatus,
+      hasWeatherStatus: !!this.state.weatherStatus,
+      // Teksten
+      welkom: d.welkom,
+      onWelkom: (e) => mut((x) => { x.welkom = e.target.value; }),
+      mededeling: d.mededeling,
+      onMededeling: (e) => mut((x) => { x.mededeling = e.target.value; }),
+      // Muziek
+      onToggleMusic: () => mut((x) => { x.showMusic = !x.showMusic; }),
+      musicToggleBg: d.showMusic ? '#f4a259' : 'rgba(242,236,220,0.25)',
+      musicToggleKnob: d.showMusic ? 'translateX(22px)' : 'translateX(0)',
+      modeTiles,
+      modeHandmatig: mode === 'handmatig',
+      modeVolumio: mode === 'volumio',
+      modeSpotify: mode === 'spotify',
+      musicSource: d.music.source,
+      onMusicSource: (e) => mut((x) => { x.music.source = e.target.value; }),
+      musicTrack: d.music.track,
+      onMusicTrack: (e) => mut((x) => { x.music.track = e.target.value; }),
+      musicArtist: d.music.artist,
+      onMusicArtist: (e) => mut((x) => { x.music.artist = e.target.value; }),
+      // Volumio
+      volumioHost: d.music.volumioHost,
+      onVolumioHost: (e) => mut((x) => { x.music.volumioHost = e.target.value; }),
+      onVolumioTest: () => this.testVolumio(),
+      volumioStatus: this.state.volumioStatus,
+      hasVolumioStatus: !!this.state.volumioStatus,
+      // Spotify
+      spotifyIsConnected: spotifyConnected,
+      spotifyNotConnected: !spotifyConnected,
+      spotifyClientId: d.music.spotifyClientId,
+      onSpotifyClientId: (e) => mut((x) => { x.music.spotifyClientId = e.target.value; }),
+      spotifyRedirect: mod.spotifyRedirectUri(),
+      onSpotifyConnect: () => {
+        const id = (d.music.spotifyClientId || '').trim();
+        if (!id) { this.setState({ spotifyStatus: 'Vul eerst je Spotify Client ID in.' }); return; }
+        mod.spotifyLogin(id);
+      },
+      onSpotifyDisconnect: () => {
+        mod.spotifyDisconnect();
+        this.setState({ spotifyTick: this.state.spotifyTick + 1, spotifyStatus: '' });
+      },
+      spotifyStatus: this.state.spotifyStatus,
+      hasSpotifyStatus: !!this.state.spotifyStatus,
+      // Tap / voorraad
+      tapRows,
+      onAddTap: () => mut((x) => { x.taps.push({ id: mod.uid(), name: '', style: '', price: '', level: 100 }); }),
+      stockRows,
+      onAddStock: () => mut((x) => { x.stock.push({ id: mod.uid(), name: '', cat: 'Bier', qty: 6 }); }),
+      // Foto's
+      photoRows,
+      photoCount: d.photos.length,
+      fileRef: this.fileRef,
+      onPickFiles: () => { if (this.fileRef.current) this.fileRef.current.click(); },
+      onFiles: (e) => { this.addFiles(e.target.files); e.target.value = ''; },
+      photoStatus: this.state.photoStatus,
+      hasPhotoStatus: !!this.state.photoStatus,
+      // Thema
+      onToggleTheme: () => mut((x) => { x.theme.enabled = !x.theme.enabled; }),
+      themeToggleBg: d.theme.enabled ? '#f4a259' : 'rgba(242,236,220,0.25)',
+      themeToggleKnob: d.theme.enabled ? 'translateX(22px)' : 'translateX(0)',
+      themeTitle: d.theme.title,
+      onThemeTitle: (e) => mut((x) => { x.theme.title = e.target.value; }),
+      themeSub: d.theme.sub,
+      onThemeSub: (e) => mut((x) => { x.theme.sub = e.target.value; }),
+      // WK-API
+      apiKey: d.theme.api.key,
+      onApiKey: (e) => mut((x) => { x.theme.api.key = e.target.value; }),
+      apiLeague: d.theme.api.league,
+      onApiLeague: (e) => mut((x) => { x.theme.api.league = e.target.value; }),
+      apiSeason: d.theme.api.season,
+      onApiSeason: (e) => mut((x) => { x.theme.api.season = e.target.value; }),
+      apiTeam: d.theme.api.team,
+      onApiTeam: (e) => mut((x) => { x.theme.api.team = e.target.value; }),
+      onWkSync: () => this.syncWk(),
+      wkStatus: this.state.wkStatus,
+      hasWkStatus: !!this.state.wkStatus,
+      lastSyncStr: d.theme.lastSync ? new Date(d.theme.lastSync).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'nog niet',
+      previewMatches: d.theme.matches.map((m) => ({
+        when: mod.formatMatchDateNL(m.date) + ' · ' + m.time,
+        teams: m.home + ' – ' + m.away,
+        right: m.score || ''
+      })),
+      previewStandings: d.theme.standings.map((s, i) => ({ pos: i + 1, team: s.team, g: s.g, pts: s.pts })),
+      // Reset
+      onReset: () => {
+        if (window.confirm('Alles terugzetten naar de voorbeelddata?')) {
+          this.mutate((x) => { Object.assign(x, structuredClone(this.mod.DEFAULT_STATE)); });
+        }
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

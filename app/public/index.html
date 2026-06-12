@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>De Fles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@400;700&family=Shadows+Into+Light+Two&family=Patrick+Hand&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; }
+  body {
+    min-height: 100vh; background: #2c3e35;
+    background-image: radial-gradient(ellipse 600px 380px at 18% 28%, rgba(244,238,222,0.05), transparent 70%),
+      radial-gradient(ellipse 700px 420px at 78% 72%, rgba(244,238,222,0.04), transparent 70%);
+    font-family: 'Patrick Hand', cursive; color: #f2ecdc;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .links { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; margin-top: 28px; }
+  .pill {
+    background: #f2ecdc; color: #2c3e35; border-radius: 999px; padding: 12px 32px;
+    font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 28px; letter-spacing: 0.06em;
+    text-decoration: none; box-shadow: 0 8px 22px rgba(0,0,0,0.35); transform: rotate(-0.6deg);
+  }
+  .ghost {
+    border: 2px solid rgba(242,236,220,0.35); color: #f2ecdc; border-radius: 999px; padding: 12px 32px;
+    font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 28px; letter-spacing: 0.06em;
+    text-decoration: none; transform: rotate(0.4deg);
+  }
+</style>
+</head>
+<body>
+<div style="text-align: center; padding: 40px;">
+  <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 30px; color: #f4a259; transform: rotate(-1.5deg);">welkom in</div>
+  <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 96px; line-height: 0.95; letter-spacing: 0.04em; text-shadow: 0 0 14px rgba(242,236,220,0.18);">DE FLES</div>
+  <div style="font-size: 15px; letter-spacing: 0.4em; color: rgba(242,236,220,0.55); margin-top: 4px;">BAR · TUINHUIS</div>
+  <div class="links">
+    <a class="pill" href="/tv/">TV-SCHERM →</a>
+    <a class="ghost" href="/admin/">BEHEERSCHERM →</a>
+  </div>
+</div>
+</body>
+</html>

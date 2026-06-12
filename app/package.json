@@ -1,0 +1,13 @@
+{
+  "name": "defles-bord",
+  "version": "1.0.0",
+  "description": "De Fles — bar-dashboard (TV-krijtbord + beheerscherm) met mini-server voor gedeelde state",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

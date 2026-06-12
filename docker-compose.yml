@@ -1,0 +1,11 @@
+services:
+  defles:
+    build: ./app
+    image: defles-bord
+    container_name: defles
+    restart: unless-stopped
+    ports:
+      - "8420:8420"
+    volumes:
+      # state + geüploade foto's overleven updates en herstarts
+      - ./data:/srv/defles/data

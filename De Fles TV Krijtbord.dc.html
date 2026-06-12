@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@400;700&amp;family=Shadows+Into+Light+Two&amp;family=Patrick+Hand&amp;display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; padding: 0; background: #1f2b25; overflow: hidden; }
+    @keyframes defles-eq { from { transform: scaleY(0.2); } to { transform: scaleY(1); } }
+    @keyframes defles-fade { from { opacity: 0; } to { opacity: 1; } }
+  </style>
+</helmet>
+<div style="position: fixed; inset: 0; background: #1f2b25; font-family: 'Patrick Hand', cursive; color: #f2ecdc;">
+  <div style="position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform: translate(-50%, -50%) scale({{ scale }}); box-sizing: border-box; padding: 22px; background: linear-gradient(135deg, #87603b, #6b4527 38%, #7d5731 70%, #5e3d22); box-shadow: inset 0 2px 0 rgba(255,235,200,0.25), inset 0 -2px 6px rgba(0,0,0,0.45);">
+    <div style="width: 100%; height: 100%; box-sizing: border-box; border-radius: 6px; background: #2c3e35; background-image: radial-gradient(ellipse 600px 380px at 18% 28%, rgba(244,238,222,0.05), transparent 70%), radial-gradient(ellipse 700px 420px at 78% 72%, rgba(244,238,222,0.04), transparent 70%), radial-gradient(ellipse 500px 300px at 60% 8%, rgba(244,238,222,0.035), transparent 70%), radial-gradient(ellipse 400px 500px at 5% 85%, rgba(244,238,222,0.03), transparent 70%); box-shadow: inset 0 0 60px rgba(0,0,0,0.35); position: relative;">
+
+      <!-- ============ VARIANT A: VAST RASTER ============ -->
+      <sc-if value="{{ isRaster }}" hint-placeholder-val="{{ true }}">
+        <div data-screen-label="TV — Krijtbord raster" style="position: absolute; inset: 0; display: flex; flex-direction: column; gap: 22px; padding: 36px 50px 42px; box-sizing: border-box;">
+
+          <!-- Bovenbalk: identiteit, klok, datum, weer, muziek -->
+          <div style="display: flex; align-items: center; gap: 34px; flex-shrink: 0;">
+            <div style="flex-shrink: 0;">
+              <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 26px; color: #f4a259; line-height: 1; transform: rotate(-1.5deg);">{{ welkom }}</div>
+              <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 74px; line-height: 0.95; letter-spacing: 0.04em; color: #f2ecdc; text-shadow: 0 0 14px rgba(242,236,220,0.18);">DE FLES</div>
+              <div style="font-size: 14px; letter-spacing: 0.4em; color: rgba(242,236,220,0.55); margin-top: 2px;">BAR · TUINHUIS</div>
+            </div>
+            <div style="width: 2px; align-self: stretch; border-left: 2px dashed rgba(242,236,220,0.3);"></div>
+            <div>
+              <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 86px; line-height: 0.9; color: #f2ecdc; text-shadow: 0 0 18px rgba(242,236,220,0.2);">{{ timeStr }}</div>
+              <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 24px; color: rgba(242,236,220,0.65); margin-top: 4px;">{{ dateStr }}</div>
+            </div>
+            <div style="width: 2px; align-self: stretch; border-left: 2px dashed rgba(242,236,220,0.3);"></div>
+            <sc-if value="{{ hasWeather }}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="color: #f4a259; display: flex;">{{ weatherIcon }}</div>
+                <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 66px; line-height: 1;">{{ tempStr }}</div>
+                <div style="min-width: 0;">
+                  <div style="font-size: 20px; color: #f2ecdc;">{{ weatherLabel }}</div>
+                  <div style="font-size: 16px; color: rgba(242,236,220,0.55);">{{ placeName }} · wind {{ windStr }}</div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ noWeather }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size: 17px; color: rgba(242,236,220,0.55);">Weerbericht wordt geladen…</div>
+            </sc-if>
+            <sc-if value="{{ showMusicView }}" hint-placeholder-val="{{ true }}">
+              <div style="margin-left: auto; display: flex; align-items: center; gap: 22px; background: #f2ecdc; border-radius: 999px; padding: 16px 34px; max-width: 620px; box-shadow: 0 8px 22px rgba(0,0,0,0.35); transform: rotate(-0.6deg);">
+                <div>{{ eqLarge }}</div>
+                <div style="min-width: 0;">
+                  <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 44px; line-height: 0.95; color: #2c3e35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ musicTrack }}</div>
+                  <div style="display: flex; align-items: baseline; gap: 14px; margin-top: 2px;">
+                    <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 26px; line-height: 1; color: #c2540a; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ musicArtist }}</div>
+                    <div style="font-size: 12px; letter-spacing: 0.24em; color: rgba(44,62,53,0.55); flex-shrink: 0;">{{ musicSourceCaps }}</div>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+          <div style="border-top: 3px dashed rgba(242,236,220,0.35); flex-shrink: 0;"></div>
+
+          <!-- Inhoud: twee kolommen -->
+          <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 470px; gap: 36px;">
+
+          <!-- Middenkolom -->
+          <div style="display: flex; flex-direction: column; gap: 24px; min-height: 0; min-width: 0;">
+            <div style="flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;">
+              <sc-if value="{{ hasPhotos }}" hint-placeholder-val="{{ true }}">
+                <div style="width: 100%; height: 100%; min-height: 0; background: #faf6ec; padding: 16px 16px 64px; box-sizing: border-box; transform: rotate(-1.2deg); box-shadow: 0 10px 30px rgba(0,0,0,0.4); display: flex; flex-direction: column; position: relative;">
+                  <div style="flex: 1; min-height: 0; overflow: hidden; position: relative; background: #ddd6c6;">
+                    <img src="{{ photoSrc }}" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: defles-fade 0.9s ease;">
+                  </div>
+                  <div style="position: absolute; left: 22px; right: 22px; bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+                    <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 27px; color: #4a4337; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ photoCaption }}</div>
+                    <div>{{ photoDotsLight }}</div>
+                  </div>
+                  <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%) rotate(2deg); width: 120px; height: 28px; background: rgba(242,236,220,0.45); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ noPhotos }}" hint-placeholder-val="{{ false }}">
+                <div style="width: 100%; height: 100%; border: 3px dashed rgba(242,236,220,0.3); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
+                  <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 32px; color: rgba(242,236,220,0.55);">Nog geen foto’s — voeg ze toe via het beheerscherm</div>
+                </div>
+              </sc-if>
+            </div>
+
+            <sc-if value="{{ hasMededeling }}" hint-placeholder-val="{{ true }}">
+              <div style="border: 3px double rgba(244,162,89,0.75); border-radius: 12px; padding: 18px 26px; display: flex; align-items: center; gap: 22px; transform: rotate(0.3deg);">
+                <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 32px; color: #f4a259; flex-shrink: 0; transform: rotate(-2deg);">let op!</div>
+                <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 40px; line-height: 1.1; color: #f2ecdc; text-wrap: pretty;">{{ mededeling }}</div>
+              </div>
+            </sc-if>
+
+            <div style="border: 2px solid rgba(242,236,220,0.3); border-radius: 12px; padding: 18px 24px;">
+              <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 34px; letter-spacing: 0.12em; color: #f2ecdc; margin-bottom: 12px;">IN DE KOELKAST</div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 9px;">
+                <sc-for list="{{ stockChips }}" as="c" hint-placeholder-count="6">
+                  <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px; border-bottom: 2px dotted rgba(242,236,220,0.3); padding: 4px 2px;">
+                    <div style="font-size: 19px; color: rgba(242,236,220,0.9); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ c.name }}</div>
+                    <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 27px; color: {{ c.chalkColor }}; flex-shrink: 0;">{{ c.qty }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rechterkolom -->
+          <div style="display: flex; flex-direction: column; gap: 24px; min-height: 0;">
+            <div style="border: 2px solid rgba(242,236,220,0.35); box-shadow: 0 0 0 5px transparent, inset 0 0 0 4px #2c3e35, inset 0 0 0 6px rgba(242,236,220,0.2); border-radius: 12px; padding: 26px 30px;">
+              <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 30px; color: #f4a259; line-height: 1; transform: rotate(-1deg);">vers van het vat</div>
+              <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 56px; letter-spacing: 0.14em; color: #f2ecdc; margin-top: 2px; text-shadow: 0 0 14px rgba(242,236,220,0.18);">OP DE TAP</div>
+              <div style="border-top: 3px dashed rgba(242,236,220,0.35); margin: 14px 0 2px;"></div>
+              <div style="display: flex; flex-direction: column;">
+                <sc-for list="{{ tapRows }}" as="t" hint-placeholder-count="3">
+                  <div style="padding: 14px 0; border-bottom: 1px solid rgba(242,236,220,0.12);">
+                    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px;">
+                      <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 41px; line-height: 1; color: #f2ecdc; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ t.name }}</div>
+                      <div style="flex: 1; border-bottom: 2px dotted rgba(242,236,220,0.3); transform: translateY(-7px); min-width: 20px;"></div>
+                      <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 33px; color: #f4a259; flex-shrink: 0;">{{ t.priceStr }}</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 14px; margin-top: 6px;">
+                      <div style="font-size: 17px; color: rgba(242,236,220,0.55); flex-shrink: 0;">{{ t.style }}</div>
+                      <div style="flex: 1; height: 6px; border-radius: 999px; background: rgba(242,236,220,0.15);">
+                        <div style="height: 6px; border-radius: 999px; background: #f4a259; width: {{ t.levelPct }};"></div>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <sc-if value="{{ themeEnabled }}" hint-placeholder-val="{{ true }}">
+              <div style="flex: 1; min-height: 0; border: 2px solid rgba(242,236,220,0.3); border-radius: 12px; padding: 22px 26px; display: flex; flex-direction: column; overflow: hidden;">
+                <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px;">
+                  <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 46px; line-height: 1; letter-spacing: 0.06em; color: #f2ecdc;">{{ themeTitleCaps }}</div>
+                  <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 26px; color: #f4a259;">{{ themeSub }}</div>
+                </div>
+                <sc-if value="{{ hasNext }}" hint-placeholder-val="{{ true }}">
+                  <div style="border: 2px dashed rgba(244,162,89,0.6); border-radius: 10px; padding: 12px 18px; margin-top: 12px;">
+                    <div style="font-size: 15px; letter-spacing: 0.26em; color: rgba(242,236,220,0.55);">VOLGENDE WEDSTRIJD</div>
+                    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin-top: 4px;">
+                      <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 37px; line-height: 1; color: #f2ecdc; min-width: 0;">{{ nextMatchLabel }}</div>
+                      <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 29px; color: #f4a259; white-space: nowrap;">{{ countdownStr }}</div>
+                    </div>
+                    <div style="font-size: 16px; color: rgba(242,236,220,0.55); margin-top: 2px;">{{ nextMatchWhen }}</div>
+                  </div>
+                </sc-if>
+                <div style="display: flex; flex-direction: column; margin-top: 8px;">
+                  <sc-for list="{{ matchRows }}" as="m" hint-placeholder-count="3">
+                    <div style="display: flex; align-items: center; gap: 14px; padding: 8px 2px; border-bottom: 1px dashed rgba(242,236,220,0.18);">
+                      <div style="width: 92px; font-size: 16px; color: rgba(242,236,220,0.55); flex-shrink: 0;">{{ m.when }}</div>
+                      <div style="flex: 1; font-size: 20px; color: #f2ecdc; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ m.teams }}</div>
+                      <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 28px; color: #f4a259;">{{ m.right }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="margin-top: auto; padding-top: 10px;">
+                  <div style="display: flex; gap: 14px; font-size: 14px; letter-spacing: 0.2em; color: rgba(242,236,220,0.5); padding: 0 2px 4px;">
+                    <div style="width: 22px;">#</div>
+                    <div style="flex: 1;">LAND</div>
+                    <div style="width: 30px; text-align: right;">G</div>
+                    <div style="width: 30px; text-align: right;">P</div>
+                  </div>
+                  <sc-for list="{{ standingRows }}" as="s" hint-placeholder-count="4">
+                    <div style="display: flex; gap: 14px; align-items: center; padding: 4px 2px; font-size: 19px;">
+                      <div style="width: 22px; color: rgba(242,236,220,0.5);">{{ s.pos }}</div>
+                      <div style="flex: 1; color: #f2ecdc;">{{ s.team }}</div>
+                      <div style="width: 30px; text-align: right; color: rgba(242,236,220,0.65);">{{ s.g }}</div>
+                      <div style="width: 30px; text-align: right; font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 26px; color: #f4a259;">{{ s.pts }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ VARIANT B: ROTEREND MIDDENVLAK ============ -->
+      <sc-if value="{{ isRoterend }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="TV — Krijtbord roterend" style="position: absolute; inset: 0; display: flex; flex-direction: column; gap: 22px; padding: 40px 50px; box-sizing: border-box;">
+
+          <!-- Bovenbalk -->
+          <div style="display: flex; align-items: center; gap: 34px; flex-shrink: 0;">
+            <div style="flex-shrink: 0;">
+              <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 25px; color: #f4a259; line-height: 1; transform: rotate(-1.5deg);">{{ welkom }}</div>
+              <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 70px; line-height: 0.95; letter-spacing: 0.04em; color: #f2ecdc; text-shadow: 0 0 14px rgba(242,236,220,0.18);">DE FLES</div>
+            </div>
+            <div style="width: 2px; align-self: stretch; border-left: 2px dashed rgba(242,236,220,0.3);"></div>
+            <div>
+              <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 80px; line-height: 0.9; color: #f2ecdc;">{{ timeStr }}</div>
+              <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 22px; color: rgba(242,236,220,0.6);">{{ dateStr }}</div>
+            </div>
+            <div style="width: 2px; align-self: stretch; border-left: 2px dashed rgba(242,236,220,0.3);"></div>
+            <sc-if value="{{ hasWeather }}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; align-items: center; gap: 14px;">
+                <div style="color: #f4a259; display: flex;">{{ weatherIconSmall }}</div>
+                <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 56px; line-height: 1;">{{ tempStr }}</div>
+                <div>
+                  <div style="font-size: 18px; color: #f2ecdc;">{{ weatherLabel }}</div>
+                  <div style="font-size: 15px; color: rgba(242,236,220,0.55);">{{ placeName }} · wind {{ windStr }}</div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ showMusicView }}" hint-placeholder-val="{{ true }}">
+              <div style="margin-left: auto; display: flex; align-items: center; gap: 18px; background: #f2ecdc; border-radius: 999px; padding: 13px 28px; max-width: 540px; box-shadow: 0 8px 22px rgba(0,0,0,0.35); transform: rotate(-0.6deg);">
+                <div>{{ eqMed }}</div>
+                <div style="min-width: 0;">
+                  <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 36px; line-height: 0.95; color: #2c3e35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ musicTrack }}</div>
+                  <div style="display: flex; align-items: baseline; gap: 12px; margin-top: 2px;">
+                    <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 22px; line-height: 1; color: #c2540a; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ musicArtist }}</div>
+                    <div style="font-size: 12px; letter-spacing: 0.24em; color: rgba(44,62,53,0.55); flex-shrink: 0;">{{ musicSourceCaps }}</div>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+
+          <!-- Wisselend hoofdvlak -->
+          <div style="flex: 1; min-height: 0; border: 2px solid rgba(242,236,220,0.3); border-radius: 14px; position: relative; overflow: hidden;">
+            <sc-if value="{{ panelPhotos }}" hint-placeholder-val="{{ true }}">
+              <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 30px; animation: defles-fade 0.7s ease;">
+                <div style="height: 100%; aspect-ratio: 3 / 2.15; max-width: 100%; background: #faf6ec; padding: 14px 14px 56px; box-sizing: border-box; transform: rotate(-1deg); box-shadow: 0 12px 36px rgba(0,0,0,0.45); position: relative;">
+                  <div style="width: 100%; height: 100%; overflow: hidden; position: relative; background: #ddd6c6;">
+                    <img src="{{ photoSrc }}" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;">
+                  </div>
+                  <div style="position: absolute; left: 20px; right: 20px; bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+                    <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 26px; color: #4a4337; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ photoCaption }}</div>
+                    <div>{{ photoDotsLight }}</div>
+                  </div>
+                  <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%) rotate(2deg); width: 110px; height: 26px; background: rgba(242,236,220,0.5); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"></div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ panelTap }}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; inset: 0; padding: 44px 80px; box-sizing: border-box; display: flex; flex-direction: column; animation: defles-fade 0.7s ease;">
+                <div style="text-align: center;">
+                  <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 40px; color: #f4a259; line-height: 1; transform: rotate(-1deg);">vers van het vat</div>
+                  <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 96px; line-height: 1; letter-spacing: 0.16em; color: #f2ecdc; text-shadow: 0 0 18px rgba(242,236,220,0.2);">OP DE TAP</div>
+                </div>
+                <div style="border-top: 3px dashed rgba(242,236,220,0.35); margin: 20px auto 6px; width: 880px;"></div>
+                <div style="width: 880px; margin: 0 auto; display: flex; flex-direction: column;">
+                  <sc-for list="{{ tapRows }}" as="t" hint-placeholder-count="3">
+                    <div style="padding: 20px 0; border-bottom: 1px solid rgba(242,236,220,0.12);">
+                      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px;">
+                        <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 62px; line-height: 1; color: #f2ecdc;">{{ t.name }}</div>
+                        <div style="flex: 1; border-bottom: 3px dotted rgba(242,236,220,0.3); transform: translateY(-10px);"></div>
+                        <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 48px; color: #f4a259;">{{ t.priceStr }}</div>
+                      </div>
+                      <div style="font-size: 22px; color: rgba(242,236,220,0.55); margin-top: 4px;">{{ t.style }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ panelTheme }}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; inset: 0; padding: 50px 70px; box-sizing: border-box; display: grid; grid-template-columns: 1fr 600px; gap: 70px; animation: defles-fade 0.7s ease;">
+                <div style="display: flex; flex-direction: column; justify-content: center;">
+                  <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 38px; color: #f4a259; line-height: 1; transform: rotate(-1deg);">{{ themeSub }}</div>
+                  <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 120px; line-height: 0.95; letter-spacing: 0.05em; color: #f2ecdc; margin-top: 6px; text-shadow: 0 0 18px rgba(242,236,220,0.2);">{{ themeTitleCaps }}</div>
+                  <sc-if value="{{ hasNext }}" hint-placeholder-val="{{ true }}">
+                    <div style="margin-top: 36px;">
+                      <div style="font-size: 18px; letter-spacing: 0.3em; color: rgba(242,236,220,0.55);">VOLGENDE WEDSTRIJD</div>
+                      <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 72px; line-height: 1; color: #f2ecdc; margin-top: 10px;">{{ nextMatchLabel }}</div>
+                      <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 64px; line-height: 1.1; color: #f4a259;">{{ countdownStr }}</div>
+                      <div style="font-size: 22px; color: rgba(242,236,220,0.55); margin-top: 4px;">{{ nextMatchWhen }}</div>
+                    </div>
+                  </sc-if>
+                </div>
+                <div style="display: flex; flex-direction: column; justify-content: center; gap: 28px;">
+                  <div>
+                    <div style="font-size: 16px; letter-spacing: 0.26em; color: rgba(242,236,220,0.5); margin-bottom: 6px;">PROGRAMMA</div>
+                    <sc-for list="{{ matchRows }}" as="m" hint-placeholder-count="3">
+                      <div style="display: flex; align-items: center; gap: 18px; padding: 12px 2px; border-bottom: 1px dashed rgba(242,236,220,0.18);">
+                        <div style="width: 110px; font-size: 19px; color: rgba(242,236,220,0.55); flex-shrink: 0;">{{ m.when }}</div>
+                        <div style="flex: 1; font-size: 24px; color: #f2ecdc;">{{ m.teams }}</div>
+                        <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 36px; color: #f4a259;">{{ m.right }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div>
+                    <div style="display: flex; gap: 16px; font-size: 15px; letter-spacing: 0.2em; color: rgba(242,236,220,0.5); padding: 0 2px 6px;">
+                      <div style="width: 26px;">#</div>
+                      <div style="flex: 1;">LAND</div>
+                      <div style="width: 40px; text-align: right;">G</div>
+                      <div style="width: 40px; text-align: right;">P</div>
+                    </div>
+                    <sc-for list="{{ standingRows }}" as="s" hint-placeholder-count="4">
+                      <div style="display: flex; gap: 16px; align-items: center; padding: 6px 2px; font-size: 23px;">
+                        <div style="width: 26px; color: rgba(242,236,220,0.5);">{{ s.pos }}</div>
+                        <div style="flex: 1; color: #f2ecdc;">{{ s.team }}</div>
+                        <div style="width: 40px; text-align: right; color: rgba(242,236,220,0.65);">{{ s.g }}</div>
+                        <div style="width: 40px; text-align: right; font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 30px; color: #f4a259;">{{ s.pts }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ panelStock }}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; inset: 0; padding: 50px 70px; box-sizing: border-box; animation: defles-fade 0.7s ease;">
+                <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 36px; color: #f4a259; line-height: 1; transform: rotate(-1deg);">koud &amp; klaar</div>
+                <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 88px; line-height: 1; letter-spacing: 0.08em; color: #f2ecdc; text-shadow: 0 0 18px rgba(242,236,220,0.2);">IN DE KOELKAST</div>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 32px;">
+                  <sc-for list="{{ stockChips }}" as="c" hint-placeholder-count="8">
+                    <div style="border: 2px solid rgba(242,236,220,0.25); border-radius: 12px; padding: 18px 22px;">
+                      <div style="font-size: 15px; letter-spacing: 0.22em; color: rgba(242,236,220,0.5);">{{ c.catCaps }}</div>
+                      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 4px;">
+                        <div style="font-size: 23px; color: #f2ecdc; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ c.name }}</div>
+                        <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 44px; line-height: 1; color: {{ c.chalkColor }};">{{ c.qty }}</div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+
+          <!-- Onderbalk -->
+          <div style="display: flex; align-items: center; gap: 24px; flex-shrink: 0;">
+            <sc-if value="{{ hasMededeling }}" hint-placeholder-val="{{ true }}">
+              <div style="flex: 1; min-width: 0; border: 3px double rgba(244,162,89,0.75); border-radius: 12px; padding: 12px 26px; display: flex; align-items: center; gap: 22px;">
+                <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 27px; color: #f4a259; flex-shrink: 0; transform: rotate(-2deg);">let op!</div>
+                <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 33px; color: #f2ecdc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ mededeling }}</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ noMededeling }}" hint-placeholder-val="{{ false }}">
+              <div style="flex: 1;"></div>
+            </sc-if>
+            <div style="flex-shrink: 0; display: flex;">{{ panelDots }}</div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;variant&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;auto&quot;, &quot;raster&quot;, &quot;roterend&quot;], &quot;default&quot;: &quot;auto&quot;, &quot;tsType&quot;: &quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { data: null, now: new Date(), weather: null, photoIdx: 0, panelIdx: 0, scale: 1 };
+
+  async componentDidMount() {
+    this.mod = await import('./defles-data.js');
+    this.setState({ data: this.mod.loadState() }, () => this.refetchWeather());
+    this.unwatch = this.mod.watchState((d) => {
+      this.setState({ data: d }, () => this.maybeRefetchWeather());
+    });
+    this.clockIv = setInterval(() => this.setState({ now: new Date() }), 1000);
+    this.photoIv = setInterval(() => this.setState((s) => ({ photoIdx: s.photoIdx + 1 })), 9000);
+    this.panelIv = setInterval(() => this.setState((s) => ({ panelIdx: s.panelIdx + 1 })), 12000);
+    this.weatherIv = setInterval(() => this.refetchWeather(), 15 * 60 * 1000);
+    this.musicIv = setInterval(() => this.refetchMusic(), 5000);
+    this.wkIv = setInterval(() => this.refetchWk(), 30 * 60 * 1000);
+    setTimeout(() => this.refetchWk(), 800);
+    this.onResize = () => this.setState({ scale: Math.min(window.innerWidth / 1920, window.innerHeight / 1080) });
+    window.addEventListener('resize', this.onResize);
+    this.onResize();
+    setTimeout(() => this.refetchMusic(), 300);
+  }
+
+  componentWillUnmount() {
+    if (this.unwatch) this.unwatch();
+    clearInterval(this.clockIv); clearInterval(this.photoIv);
+    clearInterval(this.panelIv); clearInterval(this.weatherIv);
+    clearInterval(this.musicIv); clearInterval(this.wkIv);
+    window.removeEventListener('resize', this.onResize);
+  }
+
+  // WK-schema en stand ophalen via TheSportsDB en in de gedeelde state bewaren
+  async refetchWk() {
+    const d = this.state.data;
+    if (!this.mod || !d || !d.theme || !d.theme.enabled || !d.theme.api) return;
+    try {
+      const r = await this.mod.fetchWkSchedule(d.theme.api);
+      if (!r.matches.length) return;
+      const cur = this.mod.loadState();
+      const next = JSON.stringify({ m: r.matches, s: r.standings });
+      const prev = JSON.stringify({ m: cur.theme.matches, s: cur.theme.standings });
+      if (next === prev) return;
+      cur.theme.matches = r.matches;
+      if (r.standings.length) cur.theme.standings = r.standings;
+      cur.theme.lastSync = Date.now();
+      this.mod.saveState(cur);
+      this.setState({ data: cur });
+    } catch (e) { /* offline: cache blijft staan */ }
+  }
+
+  maybeRefetchWeather() {
+    const p = this.state.data && this.state.data.weatherPlace;
+    if (p && this.lastPlace !== p.lat + ',' + p.lon) this.refetchWeather();
+  }
+
+  async refetchWeather() {
+    const d = this.state.data;
+    if (!this.mod || !d) return;
+    const p = d.weatherPlace;
+    this.lastPlace = p.lat + ',' + p.lon;
+    try {
+      const w = await this.mod.fetchWeather(p);
+      this.setState({ weather: w });
+    } catch (e) { /* offline: laat huidige staan */ }
+  }
+
+  // Live "nu speelt"-info ophalen wanneer Volumio of Spotify als bron is gekozen
+  async refetchMusic() {
+    const d = this.state.data;
+    if (!this.mod || !d || !d.music) return;
+    const mode = d.music.mode || 'handmatig';
+    if (mode === 'volumio') {
+      try {
+        const m = await this.mod.fetchVolumioState(d.music.volumioHost);
+        this.setState({ liveMusic: { ...m, sourceCaps: 'NU OP VOLUMIO' } });
+      } catch (e) { this.setState({ liveMusic: null }); }
+    } else if (mode === 'spotify') {
+      try {
+        const m = await this.mod.fetchSpotifyNowPlaying();
+        this.setState({ liveMusic: m && m.track ? { ...m, sourceCaps: 'NU OP SPOTIFY' } : null });
+      } catch (e) { this.setState({ liveMusic: null }); }
+    } else if (this.state.liveMusic) {
+      this.setState({ liveMusic: null });
+    }
+  }
+
+  weatherSvg(kind, size) {
+    const R = React.createElement;
+    const p = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round' };
+    const cloud = 'M7 18 a4.2 4.2 0 1 1 .8-8.3 A5 5 0 0 1 17.5 11 A3.5 3.5 0 0 1 17 18 Z';
+    if (kind === 'sun') return R('svg', p,
+      R('circle', { cx: 12, cy: 12, r: 4.4 }),
+      R('path', { d: 'M12 2.5v2.6 M12 18.9v2.6 M2.5 12h2.6 M18.9 12h2.6 M5 5l1.8 1.8 M17.2 17.2 19 19 M19 5l-1.8 1.8 M6.8 17.2 5 19' }));
+    if (kind === 'suncloud') return R('svg', p,
+      R('circle', { cx: 16.5, cy: 7.5, r: 3 }),
+      R('path', { d: 'M16.5 1.8v1.5 M22.2 7.5h-1.5 M20.5 3.5l-1.1 1.1' }),
+      R('path', { d: 'M6.5 20 a4 4 0 1 1 .8-7.9 A4.6 4.6 0 0 1 16 13.6 A3.2 3.2 0 0 1 15.5 20 Z' }));
+    if (kind === 'rain') return R('svg', p,
+      R('path', { d: cloud }),
+      R('path', { d: 'M8.5 20.5l.8-1.6 M12 21.5l.8-1.6 M15.5 20.5l.8-1.6' }));
+    if (kind === 'snow') return R('svg', p,
+      R('path', { d: cloud }),
+      R('path', { d: 'M9 20.3h.01 M12.5 21.3h.01 M16 20.3h.01' }));
+    if (kind === 'storm') return R('svg', p,
+      R('path', { d: cloud }),
+      R('path', { d: 'M12.5 18.6 10.8 21.4h2.4l-1.7 2.8' }));
+    if (kind === 'fog') return R('svg', p,
+      R('path', { d: 'M4 9h14 M3 13h18 M5 17h14' }));
+    return R('svg', p, R('path', { d: cloud }));
+  }
+
+  dots(count, active, palette) {
+    const R = React.createElement;
+    const colors = palette === 'light'
+      ? { on: '#c2540a', off: 'rgba(74,67,55,0.3)' }
+      : { on: '#f4a259', off: 'rgba(242,236,220,0.35)' };
+    const kids = [];
+    for (let i = 0; i < count; i++) {
+      kids.push(R('div', {
+        key: i,
+        style: {
+          width: i === active ? 26 : 9, height: 9, borderRadius: 999,
+          background: i === active ? colors.on : colors.off,
+          transition: 'all 0.4s ease'
+        }
+      }));
+    }
+    return R('div', { style: { display: 'flex', gap: 6, alignItems: 'center' } }, kids);
+  }
+
+  eqElement(height, barWidth, color) {
+    const R = React.createElement;
+    const h = height || 24, bw = barWidth || 4.5;
+    const bars = [0, 1, 2, 3].map((i) => R('div', {
+      key: i,
+      style: {
+        width: bw, height: '100%', borderRadius: bw / 1.5, background: color || '#f4a259',
+        transformOrigin: 'bottom',
+        animation: 'defles-eq ' + (0.7 + i * 0.13) + 's ease-in-out ' + (i * 0.12) + 's infinite alternate'
+      }
+    }));
+    return R('div', { style: { display: 'flex', gap: bw * 0.8, alignItems: 'flex-end', height: h } }, bars);
+  }
+
+  renderVals() {
+    const d = this.state.data;
+    const now = this.state.now;
+    const propVariant = this.props.variant ?? 'auto';
+    const variant = propVariant !== 'auto' ? propVariant : (d ? d.variant : 'raster');
+
+    const timeStr = now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = this.mod ? this.mod.formatDateNL(now) : '';
+    const w = this.state.weather;
+
+    const photos = d ? d.photos : [];
+    const hasPhotos = photos.length > 0;
+    const photo = hasPhotos ? photos[this.state.photoIdx % photos.length] : null;
+
+    const tapRows = (d ? d.taps : []).map((t) => ({
+      name: t.name, style: t.style,
+      priceStr: '\u20ac ' + (t.price || '\u2013'),
+      levelPct: Math.max(0, Math.min(100, Number(t.level) || 0)) + '%'
+    }));
+    const stockChips = (d ? d.stock : []).map((s) => {
+      const low = Number(s.qty) <= 2;
+      return {
+        name: s.name, qty: s.qty, catCaps: (s.cat || '').toUpperCase(),
+        chalkColor: low ? '#f4a259' : 'rgba(242,236,220,0.85)'
+      };
+    });
+
+    const theme = d ? d.theme : null;
+    const themeEnabled = !!(theme && theme.enabled);
+    const matches = theme ? theme.matches : [];
+    const parsed = matches.map((m) => ({ ...m, dt: new Date(m.date + 'T' + (m.time || '12:00') + ':00') }));
+    const next = parsed.filter((m) => m.dt > now && !m.score).sort((a, b) => a.dt - b.dt)[0] || null;
+    let countdownStr = '';
+    if (next) {
+      const diff = next.dt - now;
+      const dDays = Math.floor(diff / 86400000);
+      const dHrs = Math.floor((diff % 86400000) / 3600000);
+      const dMin = Math.floor((diff % 3600000) / 60000);
+      countdownStr = dDays > 0 ? 'over ' + dDays + 'd ' + dHrs + 'u' : (dHrs > 0 ? 'over ' + dHrs + 'u ' + dMin + 'm' : 'over ' + dMin + ' min');
+    }
+    const matchRows = parsed.slice(0, 4).map((m) => ({
+      when: (this.mod ? this.mod.formatMatchDateNL(m.date) : m.date),
+      teams: m.home + ' \u2013 ' + m.away,
+      right: m.score ? m.score : m.time
+    }));
+    const standingRows = (theme ? theme.standings : []).map((s, i) => ({ pos: i + 1, team: s.team, g: s.g, pts: s.pts }));
+
+    const panels = [];
+    if (hasPhotos) panels.push('photos');
+    panels.push('tap');
+    if (themeEnabled) panels.push('theme');
+    if (stockChips.length > 0) panels.push('stock');
+    const activePanel = panels[this.state.panelIdx % panels.length];
+
+    const mededeling = d ? (d.mededeling || '').trim() : '';
+    const liveMusic = this.state.liveMusic && this.state.liveMusic.track ? this.state.liveMusic : null;
+
+    return {
+      scale: this.state.scale,
+      isRaster: variant !== 'roterend',
+      isRoterend: variant === 'roterend',
+      welkom: d ? d.welkom : '',
+      timeStr, dateStr,
+      hasWeather: !!w, noWeather: !w,
+      tempStr: w ? w.temp + '\u00b0' : '',
+      weatherLabel: w ? w.label : '',
+      windStr: w ? w.wind + ' km/u' : '',
+      placeName: d ? d.weatherPlace.name : '',
+      placeCaps: d ? d.weatherPlace.name.toUpperCase() : '',
+      weatherIcon: w ? this.weatherSvg(w.kind, 56) : null,
+      weatherIconSmall: w ? this.weatherSvg(w.kind, 40) : null,
+      showMusicView: !!(d && d.showMusic),
+      musicSourceCaps: liveMusic ? liveMusic.sourceCaps : (d ? 'NU OP ' + (d.music.source || '').toUpperCase() : ''),
+      musicTrack: liveMusic ? liveMusic.track : (d ? d.music.track : ''),
+      musicArtist: liveMusic ? liveMusic.artist : (d ? d.music.artist : ''),
+      eq: this.eqElement(24, 4.5, '#f4a259'),
+      eqMed: this.eqElement(32, 5.5, '#c2540a'),
+      eqLarge: this.eqElement(44, 7, '#c2540a'),
+      hasPhotos, noPhotos: !hasPhotos,
+      photoSrc: photo ? photo.src : '',
+      photoCaption: photo ? photo.caption : '',
+      photoDotsLight: hasPhotos ? this.dots(photos.length, this.state.photoIdx % photos.length, 'light') : null,
+      hasMededeling: mededeling.length > 0,
+      noMededeling: mededeling.length === 0,
+      mededeling,
+      stockChips, tapRows,
+      themeEnabled,
+      themeTitle: theme ? theme.title : '',
+      themeTitleCaps: theme ? (theme.title || '').toUpperCase() : '',
+      themeSub: theme ? theme.sub : '',
+      hasNext: !!next,
+      nextMatchLabel: next ? next.home + ' \u2013 ' + next.away : '',
+      nextMatchWhen: next ? (this.mod ? this.mod.formatMatchDateNL(next.date) : next.date) + ' \u00b7 ' + next.time + ' uur' : '',
+      countdownStr,
+      matchRows, standingRows,
+      panelPhotos: activePanel === 'photos',
+      panelTap: activePanel === 'tap',
+      panelTheme: activePanel === 'theme',
+      panelStock: activePanel === 'stock',
+      panelDots: this.dots(panels.length, this.state.panelIdx % panels.length, 'chalk')
+    };
+  }
+}
+</script>
+</body>
+</html>
