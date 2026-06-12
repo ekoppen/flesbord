@@ -32,6 +32,8 @@ const MIME = {
 };
 
 fs.mkdirSync(PHOTO_DIR, { recursive: true });
+// data/ bevat o.a. mail.json met SMTP-creds → alleen toegankelijk voor de eigenaar
+try { fs.chmodSync(DATA_DIR, 0o700); } catch (e) { /* FS zonder rechten */ }
 
 // ---- State: in geheugen, op schijf bewaard (atomisch, met schrijf-bundeling) ----
 let state = loadStateFromDisk();
@@ -136,7 +138,9 @@ function loadMail() {
   try { return JSON.parse(fs.readFileSync(MAIL_FILE, 'utf8')); } catch (e) { return {}; }
 }
 function saveMail(cfg) {
-  fs.writeFileSync(MAIL_FILE, JSON.stringify(cfg, null, 1));
+  // Owner-only: bevat het SMTP-wachtwoord in platte tekst.
+  fs.writeFileSync(MAIL_FILE, JSON.stringify(cfg, null, 1), { mode: 0o600 });
+  try { fs.chmodSync(MAIL_FILE, 0o600); } catch (e) { /* bv. op een FS zonder rechten */ }
 }
 // Veilige versie voor de admin-UI: wachtwoord wordt nooit teruggestuurd.
 function mailPublicView(cfg) {
