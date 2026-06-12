@@ -155,20 +155,26 @@ function deriveNextEvent(d, now) {
   return { title: e.title, whenShort, coming };
 }
 
-function eventPillHtml(d) {
+// Oranje sticker-badge met het aantal aanmeldingen (rechtsboven).
+function eventBadgeHtml(d) {
   const ev = deriveNextEvent(d, new Date());
   if (!ev) return '';
-  return '<div style="border: 2px solid rgba(242,236,220,0.3); border-radius: 12px; padding: 6px 18px; display: flex; align-items: center; gap: 16px; max-width: 400px;">' +
+  return '<div data-event-badge style="background: #f4a259; color: #2c3e35; border-radius: 18px; padding: 12px 26px; display: flex; align-items: center; gap: 20px; max-width: 480px; box-shadow: 0 10px 26px rgba(0,0,0,0.4); transform: rotate(-2deg);">' +
     '<div style="text-align: center; flex-shrink: 0;">' +
-      '<div style="font-size: 11px; letter-spacing: 0.2em; color: rgba(242,236,220,0.6); line-height: 1.1;">AANMELDINGEN</div>' +
-      '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 56px; line-height: 0.85; color: #f4a259; text-shadow: 0 0 14px rgba(244,162,89,0.25);">' + esc(ev.coming) + '</div>' +
+      '<div style="font-size: 13px; letter-spacing: 0.2em; color: rgba(44,62,53,0.7); line-height: 1;">AANMELDINGEN</div>' +
+      '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 70px; line-height: 0.82; color: #2c3e35;">' + esc(ev.coming) + '</div>' +
     '</div>' +
-    '<div style="width: 2px; align-self: stretch; border-left: 2px dashed rgba(242,236,220,0.25);"></div>' +
+    '<div style="width: 2px; align-self: stretch; border-left: 2px dashed rgba(44,62,53,0.3);"></div>' +
     '<div style="min-width: 0;">' +
-      '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 26px; line-height: 1; color: #f2ecdc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(ev.title) + '</div>' +
-      '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 18px; color: rgba(242,236,220,0.6); margin-top: 2px;">' + esc(ev.whenShort) + '</div>' +
+      '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 30px; line-height: 1; color: #2c3e35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(ev.title) + '</div>' +
+      '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 20px; color: rgba(44,62,53,0.8); margin-top: 2px;">' + esc(ev.whenShort) + '</div>' +
     '</div>' +
   '</div>';
+}
+
+// Rechtsboven: muziekspeler heeft voorrang; speelt er niets, dan de badge.
+function topRightHtml(d, raster) {
+  return musicView(d) ? musicPillHtml(d, raster) : eventBadgeHtml(d);
 }
 
 function midViewsFor(d, now) {
@@ -346,8 +352,7 @@ function topBarHtml(d, raster) {
     wordmark + divider + clock + divider +
     '<div data-weather-slot style="display: flex; min-width: 0;">' + weatherHtml(raster) + '</div>' +
     mededelingTop +
-    (raster ? eventPillHtml(d) : '') +
-    '<div data-music-slot style="margin-left: auto; display: flex; min-width: 0;">' + musicPillHtml(d, raster) + '</div>' +
+    '<div data-music-slot style="margin-left: auto; display: flex; min-width: 0;">' + topRightHtml(d, raster) + '</div>' +
   '</div>';
 }
 
@@ -644,8 +649,7 @@ function roterendHtml(d) {
     '</div>' +
     '<div style="display: flex; align-items: center; gap: 24px; flex-shrink: 0;">' +
       mededelingBlock +
-      eventPillHtml(d) +
-      '<div data-panel-dots style="flex-shrink: 0; display: flex;">' + dotsHtml(panels.length, mod(app.panelIdx, panels.length), 'chalk') + '</div>' +
+      '<div data-panel-dots style="flex-shrink: 0; display: flex; margin-left: auto;">' + dotsHtml(panels.length, mod(app.panelIdx, panels.length), 'chalk') + '</div>' +
     '</div>' +
   '</div>';
 }
@@ -684,19 +688,20 @@ function applyMusic() {
   if (!d) return;
   const slot = board.querySelector('[data-music-slot]');
   if (!slot) return;
+  const raster = d.variant !== 'roterend';
   const m = musicView(d);
-  const hasPill = !!slot.querySelector('[data-music-track]');
-  if (!m) {
-    if (hasPill) slot.innerHTML = '';   // niets aan het spelen: pil weg
+  if (m) {
+    if (slot.querySelector('[data-music-track]')) {  // speler staat er al: alleen tekst bijwerken (animatie behouden)
+      setText('[data-music-track]', m.track);
+      setText('[data-music-artist]', m.artist);
+      setText('[data-music-source]', m.sourceCaps);
+    } else {
+      slot.innerHTML = musicPillHtml(d, raster);
+    }
     return;
   }
-  if (!hasPill) {
-    slot.innerHTML = musicPillHtml(d, d.variant !== 'roterend');
-    return;
-  }
-  setText('[data-music-track]', m.track);
-  setText('[data-music-artist]', m.artist);
-  setText('[data-music-source]', m.sourceCaps);
+  // niets aan het spelen → de badge mag het hoekje innemen
+  if (!slot.querySelector('[data-event-badge]')) slot.innerHTML = eventBadgeHtml(d);
 }
 
 function applyWeather() {
