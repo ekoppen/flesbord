@@ -142,7 +142,8 @@ function midViewsFor(d, now) {
   return views;
 }
 
-function logoCoasterHtml(t, size, initialsSize) {
+function logoCoasterHtml(t, size) {
+  const initialsSize = Math.round(size * 0.46);
   const imgStyle = t.logoCover
     ? 'width: 100%; height: 100%; object-fit: cover;'
     : 'width: 80%; height: 80%; object-fit: contain;';
@@ -329,6 +330,8 @@ function rasterHtml(d) {
   const stockRows = stock.map((c) =>
     '<div style="border-bottom: 2px dotted rgba(242,236,220,0.3); padding: 5px 2px; font-size: 24px; color: rgba(242,236,220,0.92); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(c.name) + '</div>').join('');
 
+  // Eén bier op de tap: het viltje groot in de kop van de kaart i.p.v. klein per regel
+  const singleTap = taps.length === 1 ? taps[0] : null;
   const tapRows = taps.map((tp) =>
     '<div style="padding: 12px 0; border-bottom: 1px solid rgba(242,236,220,0.12); display: flex; align-items: center; gap: 18px;">' +
       '<div style="flex: 1; min-width: 0;">' +
@@ -344,7 +347,7 @@ function rasterHtml(d) {
           '</div>' +
         '</div>' +
       '</div>' +
-      logoCoasterHtml(tp, 60, 28) +
+      (singleTap ? '' : logoCoasterHtml(tp, 60)) +
     '</div>').join('');
 
   const matchRows = t.matchRows.map((m) =>
@@ -402,8 +405,13 @@ function rasterHtml(d) {
       '</div>' +
       '<div style="display: flex; flex-direction: column; gap: 24px; min-height: 0;">' +
         '<div style="border: 2px solid rgba(242,236,220,0.35); box-shadow: 0 0 0 5px transparent, inset 0 0 0 4px #2c3e35, inset 0 0 0 6px rgba(242,236,220,0.2); border-radius: 12px; padding: 26px 30px;">' +
-          '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 30px; color: #f4a259; line-height: 1; transform: rotate(-1deg);">vers van het vat</div>' +
-          '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 56px; letter-spacing: 0.14em; color: #f2ecdc; margin-top: 2px; text-shadow: 0 0 14px rgba(242,236,220,0.18);">OP DE TAP</div>' +
+          '<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 20px;">' +
+            '<div style="min-width: 0;">' +
+              '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 30px; color: #f4a259; line-height: 1; transform: rotate(-1deg);">vers van het vat</div>' +
+              '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 56px; letter-spacing: 0.14em; color: #f2ecdc; margin-top: 2px; text-shadow: 0 0 14px rgba(242,236,220,0.18);">OP DE TAP</div>' +
+            '</div>' +
+            (singleTap ? '<div style="margin: 2px 6px 0 0;">' + logoCoasterHtml(singleTap, 120) + '</div>' : '') +
+          '</div>' +
           '<div style="border-top: 3px dashed rgba(242,236,220,0.35); margin: 14px 0 2px;"></div>' +
           '<div style="display: flex; flex-direction: column;">' + tapRows + '</div>' +
         '</div>' +
@@ -432,7 +440,7 @@ function mainPanelHtml(d, panel) {
           '</div>' +
           '<div style="font-size: 22px; color: rgba(242,236,220,0.55); margin-top: 4px;">' + esc(tp.style) + '</div>' +
         '</div>' +
-        logoCoasterHtml(tp, 88, 40) +
+        logoCoasterHtml(tp, 88) +
       '</div>').join('');
     return '<div style="position: absolute; inset: 0; padding: 44px 80px; box-sizing: border-box; display: flex; flex-direction: column; animation: defles-fade 0.7s ease;">' +
       '<div style="text-align: center;">' +
@@ -595,7 +603,7 @@ function applyLogo(key) {
   if (!t) return;
   for (const el of board.querySelectorAll('[data-logo-for="' + CSS.escape(key) + '"]')) {
     const size = parseInt(el.style.width, 10) || 60;
-    el.outerHTML = logoCoasterHtml(t, size, size > 70 ? 40 : 28);
+    el.outerHTML = logoCoasterHtml(t, size);
   }
 }
 
