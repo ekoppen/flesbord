@@ -7,7 +7,7 @@ import { createStateClient } from '../defles-sync.js';
 const client = createStateClient();
 const cards = document.getElementById('cards');
 
-const app = { weatherQuery: '', weatherStatus: '', volumioStatus: '', spotifyStatus: '', photoStatus: '', wkStatus: '', radioStatus: '', radioChannels: [] };
+const app = { weatherQuery: '', weatherStatus: '', volumioStatus: '', spotifyStatus: '', photoStatus: '', wkStatus: '', radioStatus: '', radioChannels: [], emblemStatus: '' };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -307,8 +307,9 @@ function cardThema(d) {
       '</div>' +
       '<button class="btn-dash" data-act="pickEmblem" style="font-size: 18px; padding: 8px 16px;">' + (t.emblem ? 'ANDER EMBLEEM' : 'EMBLEEM UPLOADEN') + '</button>' +
       (t.emblem ? '<button class="btn-ghost" data-act="rmEmblem">Terug naar de leeuw</button>' : '') +
-      '<div style="font-size: 14px; color: rgba(242,236,220,0.5); line-height: 1.5; flex: 1; min-width: 160px;">Transparante PNG werkt het mooist — de TV toont het in diapositief oranje. Leeg = de ingebouwde leeuw.</div>' +
+      '<div style="font-size: 14px; color: rgba(242,236,220,0.5); line-height: 1.5; flex: 1; min-width: 160px;">Elk logo kan — ook zwart-op-gekleurd zoals het KNVB-logo; de achtergrond wordt automatisch weggehaald en het in diapositief oranje getoond. Leeg = de ingebouwde leeuw.</div>' +
     '</div>' +
+    '<div class="status" data-status="emblem"' + (app.emblemStatus ? '' : ' style="display:none;"') + '>' + esc(app.emblemStatus) + '</div>' +
     '<div class="lbl" style="margin-bottom: 8px;">SCHEMA &amp; STAND VIA API — TheSportsDB</div>' +
     '<div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1.4fr; gap: 12px;">' +
       '<div><div class="lbl">API-SLEUTEL</div><input class="in" data-bind="theme.api.key" value="' + esc(t.api.key) + '" placeholder="123" style="width: 100%;"></div>' +
@@ -627,9 +628,14 @@ async function searchRadioChannels() {
   }
 }
 
+// Embleem/watermerk (bv. de KNVB-leeuw) omzetten naar een transparant silhouet.
+// Werkt voor transparante PNG's én voor logo's met een effen achtergrond
+// (zoals zwart-op-oranje): de achtergrond wordt op kleur weggehaald en de rand
+// bijgesneden. De TV toont het silhouet vervolgens in diapositief oranje.
 async function addEmblemFile(fileList) {
   const f = (fileList && fileList[0]) || null;
   if (!f) return;
+  setStatus('emblem', 'Embleem verwerken…');
   try {
     const url = URL.createObjectURL(f);
     const img = await new Promise((res, rej) => {
@@ -641,10 +647,58 @@ async function addEmblemFile(fileList) {
     const cw = Math.round(img.width * ratio), ch = Math.round(img.height * ratio);
     const cv = document.createElement('canvas');
     cv.width = cw; cv.height = ch;
-    cv.getContext('2d').drawImage(img, 0, 0, cw, ch);
+    const ctx = cv.getContext('2d');
+    ctx.drawImage(img, 0, 0, cw, ch);
     URL.revokeObjectURL(url);
-    mut((d) => { d.theme.emblem = cv.toDataURL('image/png'); }, true);
-  } catch (e) { /* onleesbaar bestand: niets doen */ }
+
+    const id = ctx.getImageData(0, 0, cw, ch);
+    const px = id.data;
+    // Heeft de afbeelding al echte transparantie? Dan die als vorm gebruiken.
+    let transparent = 0;
+    for (let i = 3; i < px.length; i += 4) if (px[i] < 240) transparent++;
+    const hasAlpha = transparent > cw * ch * 0.02;
+
+    if (!hasAlpha) {
+      // Achtergrondkleur schatten uit de vier hoeken en op kleurafstand weghalen
+      const corners = [[0, 0], [cw - 1, 0], [0, ch - 1], [cw - 1, ch - 1]];
+      let br = 0, bg = 0, bb = 0;
+      for (const [x, y] of corners) { const o = (y * cw + x) * 4; br += px[o]; bg += px[o + 1]; bb += px[o + 2]; }
+      br /= 4; bg /= 4; bb /= 4;
+      const lo = 55, hi = 120; // kleurafstand: < lo = achtergrond, > hi = vorm
+      for (let i = 0; i < px.length; i += 4) {
+        const d = Math.sqrt((px[i] - br) ** 2 + (px[i + 1] - bg) ** 2 + (px[i + 2] - bb) ** 2);
+        let a = (d - lo) / (hi - lo);
+        a = a < 0 ? 0 : a > 1 ? 1 : a;
+        px[i + 3] = Math.round(a * 255);
+      }
+      ctx.putImageData(id, 0, 0);
+    }
+
+    // Bijsnijden tot de zichtbare vorm zodat het watermerk groot vult
+    let minX = cw, minY = ch, maxX = 0, maxY = 0, any = false;
+    for (let y = 0; y < ch; y++) {
+      for (let x = 0; x < cw; x++) {
+        if (px[(y * cw + x) * 4 + 3] > 24) {
+          any = true;
+          if (x < minX) minX = x; if (x > maxX) maxX = x;
+          if (y < minY) minY = y; if (y > maxY) maxY = y;
+        }
+      }
+    }
+    let out = cv;
+    if (any) {
+      const m = 6, sx = Math.max(0, minX - m), sy = Math.max(0, minY - m);
+      const sw = Math.min(cw - 1, maxX + m) - sx + 1, sh = Math.min(ch - 1, maxY + m) - sy + 1;
+      const t = document.createElement('canvas');
+      t.width = sw; t.height = sh;
+      t.getContext('2d').drawImage(cv, sx, sy, sw, sh, 0, 0, sw, sh);
+      out = t;
+    }
+    mut((d) => { d.theme.emblem = out.toDataURL('image/png'); }, true);
+    setStatus('emblem', '');
+  } catch (e) {
+    setStatus('emblem', 'Kon het embleem niet verwerken — probeer een ander bestand.');
+  }
 }
 
 // ---------- events (delegatie) ----------
