@@ -170,6 +170,37 @@ labels:
 ```
 (De container moet in hetzelfde Docker-netwerk als Traefik zitten.)
 
+**Traefik — De Fles op een aparte LXC** (Traefik elders): gebruik de
+file/dynamic provider. Het **doeladres is host:poort, zónder pad**; `/welcome.html`
+komt van de middleware, `/health` is de aparte healthcheck:
+```yaml
+http:
+  routers:
+    defles:
+      rule: "Host(`defles.doorkoppen.nl`) && (PathPrefix(`/e`) || PathPrefix(`/api/rsvp`) || Path(`/welcome.html`) || Path(`/health`))"
+      entryPoints: [websecure]
+      service: defles
+      tls: { certResolver: le }
+    defles-rest:                       # al het overige → placeholder
+      rule: "Host(`defles.doorkoppen.nl`)"
+      priority: 1
+      entryPoints: [websecure]
+      service: defles
+      middlewares: [defles-welcome]
+      tls: { certResolver: le }
+  middlewares:
+    defles-welcome:
+      replacePath: { path: /welcome.html }
+  services:
+    defles:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.178.205:8420"   # alleen host:poort, GEEN /welcome.html
+        healthCheck:
+          path: /health
+          interval: 30s
+```
+
 **Caddy** (alternatief):
 ```
 defles.doorkoppen.nl {
