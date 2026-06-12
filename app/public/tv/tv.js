@@ -321,7 +321,7 @@ function topBarHtml(d, raster) {
     ? '<div style="flex-shrink: 0;">' +
         '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 26px; color: #f4a259; line-height: 1; transform: rotate(-1.5deg);">' + esc(d.welkom) + '</div>' +
         '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 74px; line-height: 0.95; letter-spacing: 0.04em; color: #f2ecdc; text-shadow: 0 0 14px rgba(242,236,220,0.18);">DE FLES</div>' +
-        '<div data-tagline style="font-size: 14px; letter-spacing: 0.4em; color: rgba(242,236,220,0.55); margin-top: 2px; height: 18px; overflow: hidden; white-space: nowrap;">BAR · TUINHUIS</div>' +
+        '<div data-tagline style="font-size: 14px; letter-spacing: 0.4em; color: rgba(242,236,220,0.55); margin-top: 2px; height: 18px; overflow: hidden; white-space: nowrap; position: relative;">BAR · TUINHUIS</div>' +
       '</div>'
     : '<div style="flex-shrink: 0;">' +
         '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 25px; color: #f4a259; line-height: 1; transform: rotate(-1.5deg);">' + esc(d.welkom) + '</div>' +
@@ -712,7 +712,8 @@ const NAMES_HTML = DEFLES_NAMES
 function playNamesMarquee() {
   for (const box of board.querySelectorAll('[data-tagline]')) {
     const span = document.createElement('span');
-    span.style.cssText = 'display: inline-block; white-space: nowrap; animation: defles-marquee 11s linear;';
+    // absoluut: telt niet mee voor de logo-breedte, dus de bovenbalk verschuift niet
+    span.style.cssText = 'position: absolute; left: 0; top: 0; white-space: nowrap; animation: defles-marquee 11s linear;';
     span.innerHTML = NAMES_HTML;
     span.addEventListener('animationend', () => { box.textContent = 'BAR · TUINHUIS'; }, { once: true });
     box.textContent = '';
