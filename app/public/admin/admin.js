@@ -455,9 +455,10 @@ function cardMail() {
       '<div><div class="lbl">WACHTWOORD' + (m.hasPass ? ' (opgeslagen — leeg laten = ongewijzigd)' : '') + '</div><input class="in" type="password" data-mail="pass" value="" placeholder="' + (m.hasPass ? '••••••••' : '') + '" style="width: 100%;"></div>' +
     '</div>' +
     '<div class="row2" style="gap: 12px; margin-top: 12px;">' +
-      '<div><div class="lbl">AFZENDER</div><input class="in" data-mail="from" value="' + esc(m.from || '') + '" placeholder="De Fles <bar@voorbeeld.nl>" style="width: 100%;"></div>' +
-      '<div><div class="lbl">PUBLIEK ADRES (voor de links in de mail)</div><input class="in" data-mail="publicBase" value="' + esc(m.publicBase || '') + '" placeholder="https://defles.voorbeeld.nl" style="width: 100%;"></div>' +
+      '<div><div class="lbl">AFZENDER</div><input class="in" data-mail="from" value="' + esc(m.from || '') + '" placeholder="De Fles <bar@doorkoppen.nl>" style="width: 100%;"></div>' +
+      '<div><div class="lbl">PUBLIEK WEBADRES VAN DIT DASHBOARD</div><input class="in" data-mail="publicBase" value="' + esc(m.publicBase || '') + '" placeholder="https://defles.doorkoppen.nl" style="width: 100%;"></div>' +
     '</div>' +
+    '<div style="font-size: 13px; color: rgba(242,236,220,0.5); margin-top: 8px; line-height: 1.5;">SMTP-server = je mailserver (bv. <b>mail.doorkoppen.nl</b>). Het publieke webadres is het adres van dít dashboard naar buiten (bv. <b>https://defles.doorkoppen.nl</b>) — niet de mailserver. Dat adres voedt de uitnodigingslinks én beveiligt de publieke pagina (alleen het RSVP-deel is dan van buiten zichtbaar).</div>' +
     '<div style="display: flex; align-items: center; gap: 14px; margin-top: 14px; flex-wrap: wrap;">' +
       '<input class="in" id="mail-test-to" placeholder="testmail naar…" style="width: 220px;">' +
       '<button class="btn-orange" data-act="mailTest">TEST</button>' +
