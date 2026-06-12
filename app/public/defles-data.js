@@ -59,7 +59,19 @@ export const DEFAULT_STATE = {
     name: '',              // weergavenaam (leeg = naam van de zender zelf)
     sub: 'nu op de buis',
     logo: null             // eigen logo (leeg = logo van de zender zelf)
-  }
+  },
+  // Generieke evenement-planner (bar-avondjes): per evenement een geheime
+  // RSVP-link; gasten laten naam + aantal + opmerking achter, jij ziet wie er
+  // komt. De 'token' hoort bij de publieke link en wordt alleen op het
+  // privé-deel (/api/state) uitgeserveerd, nooit op de publieke RSVP-pagina.
+  events: [
+    {
+      id: 'ev-demo', title: 'Nederland – Japan kijken', whenISO: '2026-06-14T21:30',
+      desc: 'Aftrap 22:00 op groot scherm — kom op tijd! Eigen versnaperingen welkom.',
+      token: 'demo-wk-japan', showOnTv: true, closed: false,
+      inviteList: '', rsvps: []
+    }
+  ]
 };
 
 // Ingebouwde leeuw (heraldisch, rampant) — opgebouwd uit vormen met een
@@ -158,6 +170,13 @@ export function formatMatchDateNL(dateStr) {
 }
 
 export function uid() { return 'x' + Math.random().toString(36).slice(2, 9); }
+
+// Lange, niet-raadbare token voor de geheime RSVP-link van een evenement.
+export function token() {
+  const b = new Uint8Array(16);
+  crypto.getRandomValues(b);
+  return Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+}
 
 // ---- WK-schema via TheSportsDB (gratis sleutel: 123, WK = competitie 4429) ----
 const TEAM_NL = {

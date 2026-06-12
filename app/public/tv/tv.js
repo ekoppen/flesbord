@@ -142,6 +142,32 @@ function deriveWkAll(d, now) {
 
 function radioOn(d) { return !!(d.radio && d.radio.enabled && d.radio.slug); }
 
+// Eerstvolgende evenement met teller (blijft staan tot ~5u na aanvang)
+function deriveNextEvent(d, now) {
+  const parsed = (d.events || []).filter((e) => e.showOnTv !== false)
+    .map((e) => ({ e, dt: e.whenISO ? new Date(e.whenISO) : null }))
+    .filter((x) => x.dt && !isNaN(x.dt) && x.dt.getTime() > now.getTime() - 5 * 3600000)
+    .sort((a, b) => a.dt - b.dt);
+  if (!parsed.length) return null;
+  const { e, dt } = parsed[0];
+  const coming = (e.rsvps || []).filter((r) => r.status !== 'nee').reduce((n, r) => n + (Number(r.count) || 1), 0);
+  const whenShort = new Intl.DateTimeFormat('nl-NL', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(dt).replace(/\./g, '');
+  return { title: e.title, whenShort, coming };
+}
+
+function eventPillHtml(d) {
+  const ev = deriveNextEvent(d, new Date());
+  if (!ev) return '';
+  return '<div style="border: 2px solid rgba(242,236,220,0.3); border-radius: 12px; padding: 8px 16px; display: flex; align-items: center; gap: 12px; max-width: 360px;">' +
+    '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 18px; color: #f4a259; line-height: 1; transform: rotate(-1.5deg); flex-shrink: 0;">wie komen er?</div>' +
+    '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 40px; line-height: 1; color: #f2ecdc; flex-shrink: 0;">' + esc(ev.coming) + '</div>' +
+    '<div style="min-width: 0;">' +
+      '<div style="font-size: 14px; color: rgba(242,236,220,0.85); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(ev.title) + '</div>' +
+      '<div style="font-size: 12px; color: rgba(242,236,220,0.5);">' + esc(ev.whenShort) + '</div>' +
+    '</div>' +
+  '</div>';
+}
+
 function midViewsFor(d, now) {
   const views = [];
   if ((d.photos || []).length > 0) views.push('photos');
@@ -317,6 +343,7 @@ function topBarHtml(d, raster) {
     wordmark + divider + clock + divider +
     '<div data-weather-slot style="display: flex; min-width: 0;">' + weatherHtml(raster) + '</div>' +
     mededelingTop +
+    (raster ? eventPillHtml(d) : '') +
     '<div data-music-slot style="margin-left: auto; display: flex; min-width: 0;">' + musicPillHtml(d, raster) + '</div>' +
   '</div>';
 }
@@ -614,6 +641,7 @@ function roterendHtml(d) {
     '</div>' +
     '<div style="display: flex; align-items: center; gap: 24px; flex-shrink: 0;">' +
       mededelingBlock +
+      eventPillHtml(d) +
       '<div data-panel-dots style="flex-shrink: 0; display: flex;">' + dotsHtml(panels.length, mod(app.panelIdx, panels.length), 'chalk') + '</div>' +
     '</div>' +
   '</div>';

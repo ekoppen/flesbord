@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>De Fles — aanmelden</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@400;700&family=Shadows+Into+Light+Two&family=Patrick+Hand&display=swap" rel="stylesheet">
+<style>
+  html { color-scheme: dark; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    min-height: 100vh; box-sizing: border-box; background: #2c3e35;
+    background-image: radial-gradient(ellipse 600px 380px at 18% 12%, rgba(244,238,222,0.05), transparent 70%),
+      radial-gradient(ellipse 700px 420px at 82% 60%, rgba(244,238,222,0.04), transparent 70%);
+    font-family: 'Patrick Hand', cursive; color: #f2ecdc;
+    display: flex; align-items: flex-start; justify-content: center; padding: 28px 16px 60px;
+  }
+  .card { width: 100%; max-width: 460px; border: 2px solid rgba(242,236,220,0.25); background: rgba(15,24,20,0.25); border-radius: 16px; padding: 26px 26px 30px; box-shadow: 0 18px 50px rgba(0,0,0,0.4); box-sizing: border-box; }
+  .wm { font-family: 'Shadows Into Light Two', cursive; font-size: 22px; color: #f4a259; transform: rotate(-1.5deg); }
+  .logo { font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 52px; line-height: 0.95; letter-spacing: 0.04em; text-shadow: 0 0 14px rgba(242,236,220,0.18); }
+  h1 { font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 40px; line-height: 1.05; margin: 14px 0 4px; }
+  .when { font-family: 'Shadows Into Light Two', cursive; font-size: 22px; color: #f4a259; }
+  .desc { font-size: 16px; color: rgba(242,236,220,0.8); line-height: 1.5; margin-top: 10px; }
+  .lbl { font-size: 13px; letter-spacing: 0.18em; color: rgba(242,236,220,0.55); margin: 18px 0 6px; }
+  .in { width: 100%; border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 10px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box; }
+  .in:focus { border-color: #f4a259; }
+  .pills { display: flex; gap: 8px; }
+  .pill { flex: 1; cursor: pointer; background: transparent; border: 2px solid rgba(242,236,220,0.3); border-radius: 999px; padding: 9px 8px; font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 20px; letter-spacing: 0.04em; color: #f2ecdc; }
+  .pill.on { background: rgba(244,162,89,0.16); border-color: #f4a259; }
+  .stepper { display: flex; align-items: center; gap: 12px; }
+  .stepbtn { cursor: pointer; width: 42px; height: 42px; border-radius: 12px; border: 2px solid rgba(242,236,220,0.3); background: transparent; color: #f2ecdc; font-size: 20px; }
+  .qty { font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 32px; min-width: 32px; text-align: center; }
+  .send { margin-top: 22px; width: 100%; cursor: pointer; border: none; background: #f4a259; color: #2c3e35; font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 28px; letter-spacing: 0.06em; border-radius: 999px; padding: 12px; box-shadow: 0 8px 22px rgba(0,0,0,0.35); }
+  .send:disabled { opacity: 0.5; cursor: default; }
+  .msg { margin-top: 14px; font-size: 16px; color: #f4a259; min-height: 20px; }
+  .ok { text-align: center; }
+  .ok .big { font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 56px; color: #8fd6a0; line-height: 1; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="wm">welkom in</div>
+  <div class="logo">DE FLES</div>
+  <div id="body"><div class="desc">Laden…</div></div>
+</div>
+<script>
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const id = decodeURIComponent(location.pathname.replace(/^\/e\/?/, '').split('/')[0] || '');
+const t = new URLSearchParams(location.search).get('t') || '';
+const body = document.getElementById('body');
+let status = 'ja', count = 1, ev = null;
+
+function fmtWhen(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  return new Intl.DateTimeFormat('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(d);
+}
+
+async function load() {
+  if (!id || !t) { body.innerHTML = '<div class="desc">Deze uitnodigingslink is niet compleet.</div>'; return; }
+  try {
+    const res = await fetch('/api/rsvp/' + encodeURIComponent(id) + '?t=' + encodeURIComponent(t));
+    if (!res.ok) throw new Error('nf');
+    ev = await res.json();
+  } catch (e) {
+    body.innerHTML = '<div class="desc">Deze uitnodiging is niet (meer) geldig.</div>';
+    return;
+  }
+  render();
+}
+
+function render() {
+  const closed = ev.closed;
+  body.innerHTML =
+    '<h1>' + esc(ev.title) + '</h1>' +
+    (ev.whenISO ? '<div class="when">' + esc(fmtWhen(ev.whenISO)) + '</div>' : '') +
+    (ev.desc ? '<div class="desc">' + esc(ev.desc) + '</div>' : '') +
+    (closed
+      ? '<div class="msg" style="margin-top:18px;">Aanmelden is gesloten voor dit evenement.</div>'
+      : (
+        '<div class="lbl">JE NAAM</div>' +
+        '<input class="in" id="name" placeholder="bv. Eelko" maxlength="80">' +
+        '<div class="lbl">KOM JE?</div>' +
+        '<div class="pills" id="pills">' +
+          '<button class="pill on" data-s="ja">JA</button>' +
+          '<button class="pill" data-s="misschien">MISSCHIEN</button>' +
+          '<button class="pill" data-s="nee">NEE</button>' +
+        '</div>' +
+        '<div class="lbl">MET HOEVEEL?</div>' +
+        '<div class="stepper">' +
+          '<button class="stepbtn" id="minus">−</button>' +
+          '<div class="qty" id="qty">1</div>' +
+          '<button class="stepbtn" id="plus">+</button>' +
+        '</div>' +
+        '<div class="lbl">OPMERKING (optioneel)</div>' +
+        '<textarea class="in" id="note" rows="2" maxlength="300" placeholder="bv. neem wat te knabbelen mee"></textarea>' +
+        '<button class="send" id="send">AANMELDEN</button>' +
+        '<div class="msg" id="msg"></div>'
+      ));
+  if (closed) return;
+  document.getElementById('pills').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-s]'); if (!b) return;
+    status = b.dataset.s;
+    for (const el of document.querySelectorAll('.pill')) el.classList.toggle('on', el === b);
+  });
+  document.getElementById('minus').onclick = () => { count = Math.max(1, count - 1); document.getElementById('qty').textContent = count; };
+  document.getElementById('plus').onclick = () => { count = Math.min(20, count + 1); document.getElementById('qty').textContent = count; };
+  document.getElementById('send').onclick = submit;
+}
+
+async function submit() {
+  const name = document.getElementById('name').value.trim();
+  const note = document.getElementById('note').value.trim();
+  const msg = document.getElementById('msg');
+  const btn = document.getElementById('send');
+  if (!name) { msg.textContent = 'Vul even je naam in.'; return; }
+  btn.disabled = true; msg.textContent = 'Versturen…';
+  try {
+    const res = await fetch('/api/rsvp/' + encodeURIComponent(id) + '?t=' + encodeURIComponent(t), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, status, count, note })
+    });
+    const j = await res.json();
+    if (!res.ok) throw new Error(j.error || 'fout');
+    const line = status === 'nee' ? 'Jammer dat je er niet bij bent!' : (status === 'misschien' ? 'Tot misschien!' : 'Tot dan!');
+    body.innerHTML = '<div class="ok"><div class="big">Bedankt!</div><div class="desc">' + esc(line) + '</div></div>';
+  } catch (e) {
+    btn.disabled = false;
+    msg.textContent = e.message || 'Er ging iets mis — probeer het zo nog eens.';
+  }
+}
+
+load();
+</script>
+</body>
+</html>

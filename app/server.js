@@ -4,6 +4,8 @@
 // (Mac, NAS, Raspberry Pi). Start: `node server.js` of `npm start`.
 
 import http from 'node:http';
+import net from 'node:net';
+import tls from 'node:tls';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import os from 'node:os';
@@ -16,6 +18,7 @@ const PUBLIC_DIR = path.join(ROOT, 'public');
 const DATA_DIR = path.join(ROOT, 'data');
 const PHOTO_DIR = path.join(DATA_DIR, 'photos');
 const STATE_FILE = path.join(DATA_DIR, 'state.json');
+const MAIL_FILE = path.join(DATA_DIR, 'mail.json');
 const PORT = Number(process.env.PORT || 8420);
 
 const MIME = {
@@ -124,6 +127,116 @@ async function getJson(fullUrl) {
   const r = await fetch(fullUrl, { signal: AbortSignal.timeout(4000) });
   if (!r.ok) throw new Error('http ' + r.status);
   return r.json();
+}
+
+// ---- Mailconfiguratie (los van de gedeelde state; bevat geheimen) ----
+// Bewust NIET in state.json/SSE, zodat het SMTP-wachtwoord nooit via /api/state
+// of het publieke RSVP-deel naar buiten lekt.
+function loadMail() {
+  try { return JSON.parse(fs.readFileSync(MAIL_FILE, 'utf8')); } catch (e) { return {}; }
+}
+function saveMail(cfg) {
+  fs.writeFileSync(MAIL_FILE, JSON.stringify(cfg, null, 1));
+}
+// Veilige versie voor de admin-UI: wachtwoord wordt nooit teruggestuurd.
+function mailPublicView(cfg) {
+  return { host: cfg.host || '', port: cfg.port || 587, secure: !!cfg.secure, user: cfg.user || '', from: cfg.from || '', publicBase: cfg.publicBase || '', hasPass: !!cfg.pass };
+}
+
+// ---- Minimale, dependency-vrije SMTP-verzender (STARTTLS of implicit TLS) ----
+// Voert een lijst stappen uit. Elke stap: { send?, expect?, starttls? }.
+// hasGreeting=true: wacht eerst op de 220-begroeting (stap 0 zonder 'send').
+// hasGreeting=false: schrijf stap 0 ('send') meteen (na een TLS-upgrade).
+function runSteps(sock, steps, hasGreeting) {
+  return new Promise((resolve, reject) => {
+    let buf = '', i = 0;
+    const timer = setTimeout(() => { cleanup(); reject(new Error('SMTP-timeout')); }, 15000);
+    const onData = (d) => {
+      buf += d.toString('utf8');
+      let nl;
+      while ((nl = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, nl).trimEnd();
+        buf = buf.slice(nl + 1);
+        if (!/^\d{3} /.test(line)) continue; // sla vervolgregels (xxx-...) over
+        const code = Number(line.slice(0, 3));
+        const step = steps[i];
+        if (step.expect && code !== step.expect) { cleanup(); return reject(new Error('SMTP ' + line)); }
+        if (step.starttls) { cleanup(); return resolve({ upgrade: true }); }
+        i++;
+        if (i >= steps.length) { cleanup(); return resolve({ done: true }); }
+        if (steps[i].send != null) sock.write(steps[i].send + '\r\n');
+      }
+    };
+    const onErr = (e) => { cleanup(); reject(e); };
+    function cleanup() { clearTimeout(timer); sock.removeListener('data', onData); sock.removeListener('error', onErr); }
+    sock.on('data', onData);
+    sock.on('error', onErr);
+    if (!hasGreeting && steps[0] && steps[0].send != null) sock.write(steps[0].send + '\r\n');
+  });
+}
+
+async function sendMail(cfg, msg) {
+  if (!cfg.host || !cfg.from) throw new Error('mail niet geconfigureerd');
+  const host = cfg.host;
+  const port = Number(cfg.port) || 587;
+  const ehlo = 'EHLO defles.local';
+  const b64 = (s) => Buffer.from(s, 'utf8').toString('base64');
+  const fromAddr = (cfg.from.match(/<(.+)>/) || [null, cfg.from])[1];
+  const headers =
+    'From: ' + cfg.from + '\r\n' +
+    'To: ' + msg.to + '\r\n' +
+    'Subject: =?UTF-8?B?' + b64(msg.subject) + '?=\r\n' +
+    'MIME-Version: 1.0\r\n' +
+    'Content-Type: text/plain; charset=UTF-8\r\n' +
+    'Content-Transfer-Encoding: base64\r\n\r\n';
+  const body = b64(msg.text).replace(/(.{76})/g, '$1\r\n');
+  const dataStep = headers + body + '\r\n.'; // runSteps voegt de afsluitende \r\n toe
+
+  const tail = [];
+  if (cfg.user) {
+    tail.push({ send: 'AUTH LOGIN', expect: 334 });
+    tail.push({ send: b64(cfg.user), expect: 334 });
+    tail.push({ send: b64(cfg.pass || ''), expect: 235 });
+  }
+  tail.push({ send: 'MAIL FROM:<' + fromAddr + '>', expect: 250 });
+  tail.push({ send: 'RCPT TO:<' + msg.to + '>', expect: 250 });
+  tail.push({ send: 'DATA', expect: 354 });
+  tail.push({ send: dataStep, expect: 250 });
+
+  // SNI mag geen IP-adres zijn; alleen bij een echte hostnaam meesturen.
+  const sni = /^[0-9.]+$/.test(host) || host.includes(':') ? undefined : host;
+  const secure = !!cfg.secure || port === 465;
+  if (secure) {
+    const sock = tls.connect({ host, port, servername: sni });
+    await new Promise((res, rej) => { sock.once('secureConnect', res); sock.once('error', rej); });
+    try {
+      await runSteps(sock, [{ expect: 220 }, { send: ehlo, expect: 250 }, ...tail], true);
+    } finally { sock.end(); }
+    return;
+  }
+  // plain → STARTTLS → opnieuw EHLO
+  const sock = net.connect({ host, port });
+  await new Promise((res, rej) => { sock.once('connect', res); sock.once('error', rej); });
+  const r = await runSteps(sock, [{ expect: 220 }, { send: ehlo, expect: 250 }, { send: 'STARTTLS', expect: 220, starttls: true }], true);
+  if (!r.upgrade) { sock.end(); throw new Error('STARTTLS niet ondersteund'); }
+  const tsock = tls.connect({ socket: sock, host, servername: sni });
+  await new Promise((res, rej) => { tsock.once('secureConnect', res); tsock.once('error', rej); });
+  try {
+    await runSteps(tsock, [{ send: ehlo, expect: 250 }, ...tail], false);
+  } finally { tsock.end(); }
+}
+
+// ---- Simpele rate-limiter voor het publieke RSVP-endpoint ----
+const rsvpHits = new Map(); // ip -> [timestamps]
+function rateLimited(ip) {
+  const now = Date.now();
+  const arr = (rsvpHits.get(ip) || []).filter((t) => now - t < 60000);
+  arr.push(now);
+  rsvpHits.set(ip, arr);
+  return arr.length > 12; // max 12 inzendingen per minuut per IP
+}
+function clientIp(req) {
+  return (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || 'onbekend';
 }
 
 async function serveFile(res, filePath) {
@@ -260,6 +373,92 @@ const server = http.createServer(async (req, res) => {
       }));
       const logo = ch && ch.logo_url ? (/^https?:\/\//i.test(ch.logo_url) ? ch.logo_url : base + ch.logo_url) : null;
       return sendJson(res, 200, { name: ch ? ch.name : '', logo, now, clip, upcoming });
+    }
+
+    // ===== Evenement-planner =====
+    // PUBLIEK + token-afgeschermd (veilig om naar internet te zetten):
+    //   GET  /e/<id>?t=        -> RSVP-pagina (statisch)
+    //   GET  /api/rsvp/<id>?t= -> alleen veilige evenement-info (geen namen/geheimen)
+    //   POST /api/rsvp/<id>?t= -> aanmelding toevoegen (rate-limited)
+    if (p === '/e' || p.startsWith('/e/')) {
+      return serveFile(res, path.join(PUBLIC_DIR, 'rsvp', 'index.html'));
+    }
+
+    if (p.startsWith('/api/rsvp/')) {
+      const id = decodeURIComponent(p.slice('/api/rsvp/'.length));
+      const t = url.searchParams.get('t') || '';
+      const ev = (state.events || []).find((e) => e.id === id);
+      if (!ev || !ev.token || ev.token !== t) return sendJson(res, 404, { error: 'niet gevonden' });
+      if (req.method === 'GET') {
+        const coming = (ev.rsvps || []).filter((r) => r.status !== 'nee').reduce((n, r) => n + (Number(r.count) || 1), 0);
+        return sendJson(res, 200, { title: ev.title, whenISO: ev.whenISO, desc: ev.desc, closed: !!ev.closed, coming });
+      }
+      if (req.method === 'POST') {
+        if (rateLimited(clientIp(req))) return sendJson(res, 429, { error: 'Te veel inzendingen — probeer het zo nog eens.' });
+        if (ev.closed) return sendJson(res, 403, { error: 'Aanmelden is gesloten voor dit evenement.' });
+        const body = await readBody(req, 64 * 1024);
+        let b; try { b = JSON.parse(body.toString('utf8')); } catch (e) { return sendJson(res, 400, { error: 'ongeldig' }); }
+        const name = String(b.name || '').trim().slice(0, 80);
+        const status = ['ja', 'misschien', 'nee'].includes(b.status) ? b.status : 'ja';
+        const count = Math.max(1, Math.min(20, Number(b.count) || 1));
+        const note = String(b.note || '').trim().slice(0, 300);
+        if (!name) return sendJson(res, 400, { error: 'Vul je naam in.' });
+        if (!Array.isArray(ev.rsvps)) ev.rsvps = [];
+        if (ev.rsvps.length >= 1000) return sendJson(res, 403, { error: 'vol' });
+        ev.rsvps.push({ id: uid(), name, status, count, note, at: Date.now() });
+        schedulePersist();
+        broadcast('');
+        return sendJson(res, 200, { ok: true });
+      }
+    }
+
+    // PRIVÉ (alleen LAN/beheer — niet naar internet exposen): mail + uitnodigen.
+    if (p === '/api/mail' && req.method === 'GET') return sendJson(res, 200, mailPublicView(loadMail()));
+    if (p === '/api/mail' && req.method === 'PUT') {
+      const body = await readBody(req, 64 * 1024);
+      const b = JSON.parse(body.toString('utf8'));
+      const cur = loadMail();
+      const next = {
+        host: (b.host || '').trim(), port: Number(b.port) || 587, secure: !!b.secure,
+        user: (b.user || '').trim(), from: (b.from || '').trim(),
+        publicBase: (b.publicBase || '').trim().replace(/\/+$/, ''),
+        // leeg wachtwoord = ongewijzigd laten (UI stuurt het nooit terug)
+        pass: (b.pass != null && b.pass !== '') ? b.pass : (cur.pass || '')
+      };
+      saveMail(next);
+      return sendJson(res, 200, mailPublicView(next));
+    }
+    if (p === '/api/mail/test' && req.method === 'POST') {
+      const body = await readBody(req, 8 * 1024);
+      const to = String(JSON.parse(body.toString('utf8')).to || '').trim();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return sendJson(res, 400, { error: 'ongeldig e-mailadres' });
+      try {
+        await sendMail(loadMail(), { to, subject: 'Testmail — De Fles', text: 'Dit is een testmail vanuit het beheerscherm van De Fles. Komt deze aan, dan staat de mailserver goed!' });
+        return sendJson(res, 200, { ok: true });
+      } catch (e) { return sendJson(res, 502, { error: 'Verzenden mislukt: ' + e.message }); }
+    }
+    if (p.startsWith('/api/events/') && p.endsWith('/invite') && req.method === 'POST') {
+      const id = decodeURIComponent(p.slice('/api/events/'.length, -('/invite'.length)));
+      const ev = (state.events || []).find((e) => e.id === id);
+      if (!ev) return sendJson(res, 404, { error: 'evenement niet gevonden' });
+      const cfg = loadMail();
+      if (!cfg.host || !cfg.from) return sendJson(res, 400, { error: 'Stel eerst de mailserver in.' });
+      const base = (cfg.publicBase || '').replace(/\/+$/, '');
+      if (!base) return sendJson(res, 400, { error: 'Stel eerst het publieke adres in (bij de mailinstellingen).' });
+      const body = await readBody(req, 64 * 1024);
+      const emails = (JSON.parse(body.toString('utf8')).emails || [])
+        .map((s) => String(s).trim()).filter((e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)).slice(0, 200);
+      if (!emails.length) return sendJson(res, 400, { error: 'geen geldige e-mailadressen' });
+      const link = base + '/e/' + encodeURIComponent(ev.id) + '?t=' + encodeURIComponent(ev.token);
+      const when = ev.whenISO ? new Date(ev.whenISO).toLocaleString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '';
+      let sent = 0; const failed = [];
+      for (const to of emails) {
+        try {
+          await sendMail(cfg, { to, subject: 'Uitnodiging: ' + ev.title, text: 'Hoi!\n\nJe bent uitgenodigd in De Fles:\n\n' + ev.title + (when ? '\n' + when : '') + (ev.desc ? '\n\n' + ev.desc : '') + '\n\nLaat even weten of je komt:\n' + link + '\n\nTot dan! — De Fles' });
+          sent++;
+        } catch (e) { failed.push(to); }
+      }
+      return sendJson(res, 200, { sent, failed });
     }
 
     // Statische bestanden

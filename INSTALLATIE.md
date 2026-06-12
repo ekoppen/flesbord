@@ -114,8 +114,67 @@ Android SDK + JDK, geen Android Studio nodig).
   server draait, via `http://127.0.0.1:8420/admin/`. Daarna werkt het overal:
   de tokens staan in de gedeelde state en de TV gebruikt ze zelf.
 
-## 4. Veiligheid
+## 4. Evenementen & uitnodigingen (bar-avondjes plannen)
+
+In het beheerscherm staat een generieke **Evenementen**-kaart: maak een avond
+aan (WK-wedstrijd, feest, wat dan ook), en gasten laten via een link hun naam,
+met hoeveel ze komen en een opmerking achter. Jij ziet in beheer wie er komt;
+op de TV staat optioneel een teller ("wie komen er? 12").
+
+- **Deelbare link** — elk evenement heeft een geheime link (met token). Plak die
+  in je WhatsApp-/Discord-groep; gasten openen 'm en melden zich aan. Geen
+  mailserver nodig.
+- **E-mail uitnodigen** (optioneel) — vul bij het evenement e-mailadressen in en
+  klik "Verstuur uitnodigingen". Hiervoor stel je eenmalig de **Mailserver**-kaart
+  in (SMTP-server, poort, gebruiker/wachtwoord, afzender) plus het **publieke
+  adres** (zie hieronder). Knop **TEST** stuurt een testmail.
+- **Teller op TV** en **aanmelden gesloten** zet je per evenement aan/uit.
+
+De mailgegevens worden los van de rest opgeslagen (`app/data/mail.json`) en
+komen nooit op de TV of de publieke pagina terecht.
+
+## 5. De RSVP-pagina veilig naar buiten zetten
+
+Gasten reageren meestal van afstand, dus de **RSVP-pagina moet vanaf internet
+bereikbaar zijn**. Zet daarbij **alleen** de publieke paden naar buiten —
+`/e/…` en `/api/rsvp/…` — en houd de rest (beheer, `/api/state`, mail) op je
+eigen netwerk. Doe dat met een reverse proxy die alleen die paden doorlaat.
+
+**Caddy:**
+```
+defles.jouwdomein.nl {
+    @rsvp path /e/* /api/rsvp/*
+    handle @rsvp {
+        reverse_proxy 192.168.1.10:8420
+    }
+    handle { respond 404 }
+}
+```
+
+**nginx:**
+```
+server {
+    server_name defles.jouwdomein.nl;
+    location ~ ^/(e/|api/rsvp/) {
+        proxy_pass http://192.168.1.10:8420;
+        proxy_set_header X-Forwarded-For $remote_addr;
+    }
+    location / { return 404; }
+}
+```
+
+Stel daarna in de **Mailserver**-kaart het **publieke adres** in
+(bv. `https://defles.jouwdomein.nl`); dat adres wordt gebruikt voor de links in
+de mails én voor de "deelbare link"-knop. Een Cloudflare Tunnel met dezelfde
+pad-regels werkt ook.
+
+> De RSVP-endpoints zijn token-afgeschermd (een onjuiste link geeft 404) en
+> hebben rate-limiting tegen misbruik. Het beheer zelf heeft bewust geen login;
+> daarom mag dat deel niet mee naar buiten.
+
+## 6. Veiligheid
 
 De server heeft bewust geen login (bar in je eigen tuinhuis, eigen netwerk).
-Zet hem dus niet zomaar open naar internet; wil je er buitenshuis bij, gebruik
-dan bv. Tailscale of een VPN naar je thuisnetwerk.
+Zet het **beheer** dus niet zomaar open naar internet — alleen de RSVP-paden
+(zie hierboven). Wil je zelf overal bij het beheer kunnen, gebruik dan bv.
+Tailscale of een VPN naar je thuisnetwerk.

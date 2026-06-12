@@ -7,7 +7,7 @@ import { createStateClient } from '../defles-sync.js';
 const client = createStateClient();
 const cards = document.getElementById('cards');
 
-const app = { weatherQuery: '', weatherStatus: '', volumioStatus: '', spotifyStatus: '', photoStatus: '', wkStatus: '', radioStatus: '', radioChannels: [], emblemStatus: '' };
+const app = { weatherQuery: '', weatherStatus: '', volumioStatus: '', spotifyStatus: '', photoStatus: '', wkStatus: '', radioStatus: '', radioChannels: [], emblemStatus: '', mail: null, mailStatus: '', eventMsg: {} };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -380,6 +380,92 @@ function cardRadio(d) {
   '</div>';
 }
 
+function eventLink(ev) {
+  const base = (app.mail && app.mail.publicBase) || (location.origin);
+  return base.replace(/\/+$/, '') + '/e/' + encodeURIComponent(ev.id) + '?t=' + encodeURIComponent(ev.token);
+}
+
+function cardEvents(d) {
+  const evs = d.events || [];
+  const rows = evs.map((ev, i) => {
+    const rsvps = ev.rsvps || [];
+    const coming = rsvps.filter((r) => r.status !== 'nee').reduce((n, r) => n + (Number(r.count) || 1), 0);
+    const ja = rsvps.filter((r) => r.status === 'ja').length;
+    const msch = rsvps.filter((r) => r.status === 'misschien').length;
+    const guestRows = rsvps.length
+      ? rsvps.map((r) => {
+          const tag = r.status === 'nee' ? 'komt niet' : (r.status === 'misschien' ? 'misschien' : 'komt');
+          const col = r.status === 'nee' ? 'rgba(242,236,220,0.45)' : (r.status === 'misschien' ? '#f4a259' : '#8fd6a0');
+          return '<div style="display: flex; align-items: baseline; gap: 10px; padding: 5px 2px; border-bottom: 1px dashed rgba(242,236,220,0.15);">' +
+            '<div style="flex: 1; min-width: 0; color: #f2ecdc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(r.name) + (Number(r.count) > 1 ? ' <span style="color: rgba(242,236,220,0.55);">+' + (r.count - 1) + '</span>' : '') + (r.note ? ' <span style="font-family: \'Shadows Into Light Two\', cursive; color: rgba(242,236,220,0.6);">“' + esc(r.note) + '”</span>' : '') + '</div>' +
+            '<div style="font-size: 13px; color: ' + col + '; flex-shrink: 0;">' + tag + '</div>' +
+          '</div>';
+        }).join('')
+      : '<div style="font-size: 14px; color: rgba(242,236,220,0.45); padding: 6px 2px;">Nog niemand aangemeld.</div>';
+    const msg = app.eventMsg[ev.id];
+    return '<div style="border: 2px solid rgba(242,236,220,0.2); border-radius: 12px; padding: 18px 20px; margin-bottom: 14px;">' +
+      '<div class="row2" style="gap: 12px;">' +
+        '<div><div class="lbl">TITEL</div><input class="in" data-bind="events.' + i + '.title" value="' + esc(ev.title) + '" style="width: 100%;"></div>' +
+        '<div><div class="lbl">WANNEER</div><input class="in" type="datetime-local" data-bind="events.' + i + '.whenISO" value="' + esc(ev.whenISO) + '" style="width: 100%;"></div>' +
+      '</div>' +
+      '<div class="lbl" style="margin-top: 12px;">OMSCHRIJVING</div>' +
+      '<textarea class="in" data-bind="events.' + i + '.desc" rows="2" style="width: 100%; resize: vertical;">' + esc(ev.desc) + '</textarea>' +
+      '<div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 12px;">' +
+        '<div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 14px; color: rgba(242,236,220,0.6);">teller op TV</span>' + toggleHtml('evTv', ev.showOnTv !== false, 'Op TV') .replace('data-act="evTv"', 'data-act="evTv" data-arg="' + i + '"') + '</div>' +
+        '<div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 14px; color: rgba(242,236,220,0.6);">aanmelden gesloten</span>' + toggleHtml('evClosed', !!ev.closed, 'Gesloten').replace('data-act="evClosed"', 'data-act="evClosed" data-arg="' + i + '"') + '</div>' +
+        '<button class="btn-x" data-act="rmEvent" data-arg="' + i + '" title="Evenement verwijderen" style="margin-left: auto;">✕</button>' +
+      '</div>' +
+      '<div class="lbl" style="margin-top: 14px;">DEELBARE LINK (plak in je WhatsApp-/Discord-groep)</div>' +
+      '<div style="display: flex; gap: 10px; align-items: center;">' +
+        '<input class="in" readonly value="' + esc(eventLink(ev)) + '" style="flex: 1; user-select: all;" onclick="this.select()">' +
+        '<button class="btn-orange" data-act="copyLink" data-arg="' + i + '">KOPIEER</button>' +
+      '</div>' +
+      '<div class="lbl" style="margin-top: 14px;">UITNODIGEN PER E-MAIL (één adres per regel)</div>' +
+      '<textarea class="in" data-bind="events.' + i + '.inviteList" rows="2" placeholder="naam@voorbeeld.nl" style="width: 100%; resize: vertical;">' + esc(ev.inviteList || '') + '</textarea>' +
+      '<div style="display: flex; align-items: center; gap: 14px; margin-top: 10px; flex-wrap: wrap;">' +
+        '<button class="btn-dash" data-act="invite" data-arg="' + i + '" style="font-size: 18px;">VERSTUUR UITNODIGINGEN</button>' +
+        (msg ? '<div class="status" style="margin: 0;">' + esc(msg) + '</div>' : '') +
+      '</div>' +
+      '<div class="lbl" style="margin-top: 16px;">AANGEMELD · ' + coming + ' komen <span style="color: rgba(242,236,220,0.45); letter-spacing: 0;">(' + ja + '× ja, ' + msch + '× misschien)</span></div>' +
+      '<div>' + guestRows + '</div>' +
+    '</div>';
+  }).join('');
+  return '<div class="card">' +
+    '<div class="card-h" style="margin-bottom: 6px;">EVENEMENTEN</div>' +
+    '<div style="font-size: 14px; color: rgba(242,236,220,0.55); margin-bottom: 16px; line-height: 1.5;">Plan een bar-avond, deel de link of mail een uitnodiging; gasten laten hun naam achter en je ziet hier wie er komt.</div>' +
+    rows +
+    '<button class="btn-dash" data-act="addEvent">+ EVENEMENT TOEVOEGEN</button>' +
+  '</div>';
+}
+
+function cardMail() {
+  const m = app.mail || {};
+  return '<div class="card">' +
+    '<div class="card-h" style="margin-bottom: 6px;">MAILSERVER (voor uitnodigingen)</div>' +
+    '<div style="font-size: 14px; color: rgba(242,236,220,0.55); margin-bottom: 16px; line-height: 1.5;">Nodig om uitnodigingen te mailen. Niet verplicht — de deelbare link werkt altijd. Gegevens worden los van de rest opgeslagen en nooit op de TV of publieke pagina getoond.</div>' +
+    '<div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px;">' +
+      '<div><div class="lbl">SMTP-SERVER</div><input class="in" data-mail="host" value="' + esc(m.host || '') + '" placeholder="mail.voorbeeld.nl" style="width: 100%;"></div>' +
+      '<div><div class="lbl">POORT</div><input class="in" data-mail="port" value="' + esc(m.port || 587) + '" placeholder="587" style="width: 100%;"></div>' +
+      '<div><div class="lbl">TLS</div>' +
+        '<button data-act="mailSecure" aria-label="Directe TLS" style="cursor: pointer; border: none; width: 52px; height: 30px; border-radius: 999px; background: ' + (m.secure ? '#f4a259' : 'rgba(242,236,220,0.25)') + '; position: relative; padding: 0; margin-top: 4px;"><div style="position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 999px; background: #f2ecdc; transform: ' + (m.secure ? 'translateX(22px)' : 'translateX(0)') + '; transition: transform 0.2s ease;"></div></button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="row2" style="gap: 12px; margin-top: 12px;">' +
+      '<div><div class="lbl">GEBRUIKERSNAAM</div><input class="in" data-mail="user" value="' + esc(m.user || '') + '" placeholder="naam@voorbeeld.nl" style="width: 100%;"></div>' +
+      '<div><div class="lbl">WACHTWOORD' + (m.hasPass ? ' (opgeslagen — leeg laten = ongewijzigd)' : '') + '</div><input class="in" type="password" data-mail="pass" value="" placeholder="' + (m.hasPass ? '••••••••' : '') + '" style="width: 100%;"></div>' +
+    '</div>' +
+    '<div class="row2" style="gap: 12px; margin-top: 12px;">' +
+      '<div><div class="lbl">AFZENDER</div><input class="in" data-mail="from" value="' + esc(m.from || '') + '" placeholder="De Fles <bar@voorbeeld.nl>" style="width: 100%;"></div>' +
+      '<div><div class="lbl">PUBLIEK ADRES (voor de links in de mail)</div><input class="in" data-mail="publicBase" value="' + esc(m.publicBase || '') + '" placeholder="https://defles.voorbeeld.nl" style="width: 100%;"></div>' +
+    '</div>' +
+    '<div style="display: flex; align-items: center; gap: 14px; margin-top: 14px; flex-wrap: wrap;">' +
+      '<input class="in" id="mail-test-to" placeholder="testmail naar…" style="width: 220px;">' +
+      '<button class="btn-orange" data-act="mailTest">TEST</button>' +
+      '<div class="status" data-status="mail"' + (app.mailStatus ? '' : ' style="display:none;"') + '>' + esc(app.mailStatus) + '</div>' +
+    '</div>' +
+  '</div>';
+}
+
 function render() {
   const d = client.get();
   if (!d) return;
@@ -387,7 +473,7 @@ function render() {
     '<div style="display: flex; flex-direction: column; gap: 20px;">' +
       '<div class="row2">' + cardScherm(d) + cardWeer(d) + '</div>' +
       '<div class="row2">' + cardTeksten(d) + cardMuziek(d) + '</div>' +
-      cardTap(d) + cardVoorraad(d) + cardFotos(d) + cardThema(d) + cardRadio(d) +
+      cardTap(d) + cardVoorraad(d) + cardFotos(d) + cardThema(d) + cardRadio(d) + cardEvents(d) + cardMail() +
       '<div style="display: flex; justify-content: flex-end; padding: 4px;">' +
         '<button class="btn-ghost" data-act="reset">Terug naar voorbeelddata</button>' +
       '</div>' +
@@ -397,11 +483,12 @@ function render() {
 // Re-render met behoud van focus + cursorpositie (voor updates van andere apparaten)
 function renderPreservingFocus() {
   const act = document.activeElement;
-  const key = act && (act.dataset.bind || act.dataset.local);
+  const attr = act && (act.dataset.bind ? 'data-bind' : act.dataset.local ? 'data-local' : act.dataset.mail ? 'data-mail' : null);
+  const key = attr && act.getAttribute(attr);
   const selStart = act && act.selectionStart != null ? act.selectionStart : null;
   render();
   if (key) {
-    const sel = act.dataset.bind ? '[data-bind="' + key + '"]' : '[data-local="' + key + '"]';
+    const sel = '[' + attr + '="' + key + '"]';
     const el = cards.querySelector(sel);
     if (el) {
       el.focus();
@@ -632,6 +719,38 @@ async function searchRadioChannels() {
 // Werkt voor transparante PNG's én voor logo's met een effen achtergrond
 // (zoals zwart-op-oranje): de achtergrond wordt op kleur weggehaald en de rand
 // bijgesneden. De TV toont het silhouet vervolgens in diapositief oranje.
+async function inviteEvent(i) {
+  const ev = client.get().events[i];
+  const emails = (ev.inviteList || '').split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+  if (!emails.length) { app.eventMsg[ev.id] = 'Vul eerst e-mailadressen in.'; render(); return; }
+  await client.flush(); // zorg dat de server het laatste evenement (token) kent
+  app.eventMsg[ev.id] = 'Versturen…'; render();
+  try {
+    const res = await fetch('/api/events/' + encodeURIComponent(ev.id) + '/invite', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ emails })
+    });
+    const j = await res.json();
+    if (!res.ok) throw new Error(j.error || 'fout');
+    app.eventMsg[ev.id] = j.sent + ' verstuurd ✓' + (j.failed && j.failed.length ? ' · ' + j.failed.length + ' mislukt' : '');
+  } catch (e) {
+    app.eventMsg[ev.id] = 'Mislukt: ' + (e.message || 'controleer de mailserver');
+  }
+  render();
+}
+
+async function mailTest() {
+  const el = document.getElementById('mail-test-to');
+  const to = el ? el.value.trim() : '';
+  if (!to) { setStatus('mail', 'Vul een e-mailadres in.'); return; }
+  setStatus('mail', 'Testmail versturen…');
+  try {
+    await client.flush();
+    const res = await fetch('/api/mail/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to }) });
+    const j = await res.json();
+    setStatus('mail', res.ok ? 'Testmail verstuurd ✓' : (j.error || 'verzenden mislukt'));
+  } catch (e) { setStatus('mail', 'Verzenden mislukt — controleer de instellingen.'); }
+}
+
 async function addEmblemFile(fileList) {
   const f = (fileList && fileList[0]) || null;
   if (!f) return;
@@ -703,9 +822,24 @@ async function addEmblemFile(fileList) {
 
 // ---------- events (delegatie) ----------
 
+let mailSaveTimer = null;
+function scheduleMailSave() {
+  clearTimeout(mailSaveTimer);
+  mailSaveTimer = setTimeout(async () => {
+    try {
+      const res = await fetch('/api/mail', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(app.mail || {})
+      });
+      app.mail = await res.json(); // genormaliseerde, gemaskeerde versie terug
+    } catch (e) { /* offline: volgende wijziging probeert opnieuw */ }
+  }, 600);
+}
+
 document.addEventListener('input', (e) => {
   const el = e.target;
   if (el.id === 'file-input') return;
+  if (el.dataset.mail) { app.mail = app.mail || {}; app.mail[el.dataset.mail] = el.value; scheduleMailSave(); return; }
   if (el.dataset.local) { app[el.dataset.local] = el.value; return; }
   const bind = el.dataset.bind;
   if (!bind) return;
@@ -767,6 +901,20 @@ document.addEventListener('click', (e) => {
     case 'rmEmblem': mut((d) => { d.theme.emblem = null; }, true); break;
     case 'toggleRadio': mut((d) => { d.radio.enabled = !d.radio.enabled; }, true); break;
     case 'radioChannels': searchRadioChannels(); break;
+    case 'addEvent': mut((d) => { if (!d.events) d.events = []; d.events.push({ id: D.uid(), title: 'Nieuwe avond', whenISO: '', desc: '', token: D.token(), showOnTv: true, closed: false, inviteList: '', rsvps: [] }); }, true); break;
+    case 'rmEvent': { if (window.confirm('Dit evenement en alle aanmeldingen verwijderen?')) mut((d) => { d.events.splice(i, 1); }, true); break; }
+    case 'evTv': mut((d) => { d.events[i].showOnTv = !(d.events[i].showOnTv !== false); }, true); break;
+    case 'evClosed': mut((d) => { d.events[i].closed = !d.events[i].closed; }, true); break;
+    case 'copyLink': {
+      const ev = client.get().events[i];
+      const link = eventLink(ev);
+      const done = () => { app.eventMsg[ev.id] = 'Link gekopieerd ✓'; render(); setTimeout(() => { delete app.eventMsg[ev.id]; render(); }, 2500); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, done); else done();
+      break;
+    }
+    case 'invite': inviteEvent(i); break;
+    case 'mailSecure': { app.mail = app.mail || {}; app.mail.secure = !app.mail.secure; scheduleMailSave(); render(); break; }
+    case 'mailTest': mailTest(); break;
     case 'pickRadioLogo': { pendingCrop = (src) => mut((d) => { d.radio.logo = src; }, true); const f = document.getElementById('logo-input'); if (f) f.click(); break; }
     case 'rmRadioLogo': mut((d) => { d.radio.logo = null; }, true); break;
     case 'addStock': mut((d) => { d.stock.push({ id: D.uid(), name: '', cat: 'Bier', qty: 6 }); }, true); break;
@@ -818,6 +966,7 @@ async function main() {
     setTimeout(main, 3000);
     return;
   }
+  try { app.mail = await (await fetch('/api/mail')).json(); } catch (e) { app.mail = {}; }
 
   // Terugkeer van Spotify-login afhandelen (?code=...)
   if (new URLSearchParams(location.search).get('code')) {
