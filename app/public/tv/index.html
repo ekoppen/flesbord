@@ -12,6 +12,13 @@
   * { cursor: none; }
   @keyframes defles-eq { from { transform: scaleY(0.2); } to { transform: scaleY(1); } }
   @keyframes defles-fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes defles-pop {
+    0%   { transform: rotate(-2deg) scale(1); }
+    25%  { transform: rotate(-2deg) scale(1.22); }
+    45%  { transform: rotate(2deg) scale(1.1); }
+    65%  { transform: rotate(-2deg) scale(0.98); }
+    100% { transform: rotate(-2deg) scale(1); }
+  }
 </style>
 </head>
 <body>

@@ -155,26 +155,21 @@ function deriveNextEvent(d, now) {
   return { title: e.title, whenShort, coming };
 }
 
-// Oranje sticker-badge met het aantal aanmeldingen (rechtsboven).
+// Oranje sticker-badge met het aantal aanmeldingen (op de "let op!"-plek).
 function eventBadgeHtml(d) {
   const ev = deriveNextEvent(d, new Date());
   if (!ev) return '';
-  return '<div data-event-badge style="background: #f4a259; color: #2c3e35; border-radius: 18px; padding: 12px 26px; display: flex; align-items: center; gap: 20px; max-width: 480px; box-shadow: 0 10px 26px rgba(0,0,0,0.4); transform: rotate(-2deg);">' +
+  return '<div data-event-badge style="background: #f4a259; color: #2c3e35; border-radius: 20px; padding: 12px 32px; display: flex; align-items: center; gap: 24px; max-width: 560px; box-shadow: 0 12px 30px rgba(0,0,0,0.42); transform: rotate(-2deg); transform-origin: center;">' +
     '<div style="text-align: center; flex-shrink: 0;">' +
-      '<div style="font-size: 13px; letter-spacing: 0.2em; color: rgba(44,62,53,0.7); line-height: 1;">AANMELDINGEN</div>' +
-      '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 70px; line-height: 0.82; color: #2c3e35;">' + esc(ev.coming) + '</div>' +
+      '<div style="font-size: 15px; letter-spacing: 0.2em; color: rgba(44,62,53,0.7); line-height: 1;">AANMELDINGEN</div>' +
+      '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 92px; line-height: 0.8; color: #2c3e35;">' + esc(ev.coming) + '</div>' +
     '</div>' +
     '<div style="width: 2px; align-self: stretch; border-left: 2px dashed rgba(44,62,53,0.3);"></div>' +
     '<div style="min-width: 0;">' +
-      '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 30px; line-height: 1; color: #2c3e35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(ev.title) + '</div>' +
-      '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 20px; color: rgba(44,62,53,0.8); margin-top: 2px;">' + esc(ev.whenShort) + '</div>' +
+      '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 36px; line-height: 1; color: #2c3e35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(ev.title) + '</div>' +
+      '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 22px; color: rgba(44,62,53,0.8); margin-top: 3px;">' + esc(ev.whenShort) + '</div>' +
     '</div>' +
   '</div>';
-}
-
-// Rechtsboven: muziekspeler heeft voorrang; speelt er niets, dan de badge.
-function topRightHtml(d, raster) {
-  return musicView(d) ? musicPillHtml(d, raster) : eventBadgeHtml(d);
 }
 
 function midViewsFor(d, now) {
@@ -348,11 +343,14 @@ function topBarHtml(d, raster) {
         '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 30px; line-height: 1.05; color: #f2ecdc; text-wrap: pretty; max-height: 64px; overflow: hidden;">' + esc(mededeling) + '</div>' +
       '</div>'
     : '';
+  // Middenstuk: de aanmeldingen-badge staat op de plek van "let op!"; is er geen
+  // evenement, dan toont dat plekje de mededeling (raster).
+  const middle = '<div data-badge-slot style="display: flex; min-width: 0;">' + (eventBadgeHtml(d) || mededelingTop) + '</div>';
   return '<div style="display: flex; align-items: center; gap: 34px; flex-shrink: 0;">' +
     wordmark + divider + clock + divider +
     '<div data-weather-slot style="display: flex; min-width: 0;">' + weatherHtml(raster) + '</div>' +
-    mededelingTop +
-    '<div data-music-slot style="margin-left: auto; display: flex; min-width: 0;">' + topRightHtml(d, raster) + '</div>' +
+    middle +
+    '<div data-music-slot style="margin-left: auto; display: flex; min-width: 0;">' + musicPillHtml(d, raster) + '</div>' +
   '</div>';
 }
 
@@ -690,18 +688,31 @@ function applyMusic() {
   if (!slot) return;
   const raster = d.variant !== 'roterend';
   const m = musicView(d);
-  if (m) {
-    if (slot.querySelector('[data-music-track]')) {  // speler staat er al: alleen tekst bijwerken (animatie behouden)
-      setText('[data-music-track]', m.track);
-      setText('[data-music-artist]', m.artist);
-      setText('[data-music-source]', m.sourceCaps);
-    } else {
-      slot.innerHTML = musicPillHtml(d, raster);
-    }
+  const hasPill = !!slot.querySelector('[data-music-track]');
+  if (!m) {
+    if (hasPill) slot.innerHTML = '';   // niets aan het spelen: speler weg
     return;
   }
-  // niets aan het spelen → de badge mag het hoekje innemen
-  if (!slot.querySelector('[data-event-badge]')) slot.innerHTML = eventBadgeHtml(d);
+  if (!hasPill) {
+    slot.innerHTML = musicPillHtml(d, raster);
+    return;
+  }
+  setText('[data-music-track]', m.track);
+  setText('[data-music-artist]', m.artist);
+  setText('[data-music-source]', m.sourceCaps);
+}
+
+// Korte pop-animatie op de badge zodra het aantal aanmeldingen stijgt.
+function pulseBadge() {
+  const el = board.querySelector('[data-event-badge]');
+  if (!el) return;
+  el.style.animation = 'none';
+  void el.offsetWidth;
+  el.style.animation = 'defles-pop 0.9s ease';
+}
+function currentComing(d) {
+  const ev = d ? deriveNextEvent(d, new Date()) : null;
+  return ev ? ev.coming : -1;
 }
 
 function applyWeather() {
@@ -918,11 +929,16 @@ async function main() {
   app.radioKey = radioOn(app.data) ? app.data.radio.base + '|' + app.data.radio.slug : '';
   refetchRadio();
 
+  app.lastComing = currentComing(app.data);
   client.watch((d) => {
+    const prev = app.lastComing;
     app.data = d;
     renderBoard();
     maybeRefetchWeather();
     loadLogos();
+    const now = currentComing(d);
+    if (prev != null && now > prev) pulseBadge();   // nieuwe aanmelding → pop
+    app.lastComing = now;
     // RetroHead opnieuw ophalen als adres/zender is gewijzigd (of net aangezet)
     const key = radioOn(d) ? d.radio.base + '|' + d.radio.slug : '';
     if (key !== app.radioKey) { app.radioKey = key; app.radioData = null; refetchRadio(); }
