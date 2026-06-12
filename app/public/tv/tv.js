@@ -232,21 +232,23 @@ function radioPosterHtml(d) {
   const data = app.radioData;
   const name = (r.name || (data && data.name) || 'RetroHead').toUpperCase();
   const layers = data && data.logoLayers;
-  let logoHtml = '';
+  // Het logo staat absoluut in de rechterbovenhoek (buiten de header-flow), zodat
+  // de header compact blijft en het logo flink groot kan zonder lege ruimte.
+  let logoInner = '';
   if (r.logo) {
-    // eigen geüpload logo: enkel beeld, niet bijsnijden
-    logoHtml = '<div style="width: 132px; height: 132px; flex-shrink: 0; transform: rotate(2deg);"><img src="' + esc(r.logo) + '" alt="" style="width: 100%; height: 100%; object-fit: contain;"></div>';
+    logoInner = '<div style="width: 100%; height: 100%; transform: rotate(2deg);"><img src="' + esc(r.logo) + '" alt="" style="width: 100%; height: 100%; object-fit: contain;"></div>';
   } else if (layers && layers.length) {
-    // zenderlogo als laag-compositie (z-volgorde = array-volgorde)
-    const stack = layers.map((l, idx) =>
+    logoInner = layers.map((l, idx) =>
       '<div style="position: absolute; left: 50%; top: 50%; width: ' + l.widthPct + '%; opacity: ' + l.opacity +
       '; z-index: ' + idx + '; transform: translate(calc(-50% + ' + l.xPct + '%), calc(-50% + ' + l.yPct + '%)) rotate(' + l.rotation + 'deg);">' +
         '<img src="' + esc(l.url) + '" alt="" style="width: 100%; height: auto; display: block;">' +
       '</div>').join('');
-    logoHtml = '<div style="position: relative; width: 150px; height: 150px; flex-shrink: 0;">' + stack + '</div>';
   } else if (data && data.logo) {
-    logoHtml = '<div style="width: 132px; height: 132px; flex-shrink: 0; transform: rotate(2deg);"><img src="' + esc(data.logo) + '" alt="" style="width: 100%; height: 100%; object-fit: contain;"></div>';
+    logoInner = '<div style="width: 100%; height: 100%; transform: rotate(2deg);"><img src="' + esc(data.logo) + '" alt="" style="width: 100%; height: 100%; object-fit: contain;"></div>';
   }
+  const logoHtml = logoInner
+    ? '<div style="position: absolute; top: 20px; right: 30px; width: 200px; height: 200px; z-index: 5;">' + logoInner + '</div>'
+    : '';
   let body;
   if (!data) {
     body = '<div style="flex: 1; display: flex; align-items: center; justify-content: center; font-family: \'Shadows Into Light Two\', cursive; font-size: 30px; color: rgba(74,67,55,0.6);">Programmering wordt geladen…</div>';
@@ -257,7 +259,7 @@ function radioPosterHtml(d) {
       : '';
     const nowBlock = data.now
       ? '<div style="border: 3px double rgba(194,84,10,0.55); border-radius: 10px; padding: 12px 22px; margin-top: 12px; flex-shrink: 0;">' +
-          '<div style="display: flex; align-items: center; gap: 12px;">' +
+          '<div style="display: flex; align-items: center; gap: 12px; padding-right: ' + (logoInner ? '180px' : '0') + ';">' +
             '<div style="width: 12px; height: 12px; border-radius: 999px; background: ' + accent + ';"></div>' +
             '<div style="font-size: 13px; letter-spacing: 0.26em; color: rgba(74,67,55,0.55);">NU OP DE BUIS</div>' +
             (data.now.start ? '<div style="margin-left: auto; font-size: 16px; color: rgba(74,67,55,0.6);">' + esc(data.now.start) + (data.now.end ? '–' + esc(data.now.end) : '') + '</div>' : '') +
@@ -283,15 +285,13 @@ function radioPosterHtml(d) {
       '<div style="flex: 1; min-height: 0; overflow: hidden;">' + rows + '</div>';
   }
   return '<div style="width: 100%; height: 100%; min-height: 0; background: #faf6ec; padding: 24px 34px 22px; box-sizing: border-box; transform: rotate(-0.6deg); box-shadow: 0 10px 30px rgba(0,0,0,0.4); display: flex; flex-direction: column; position: relative;">' +
-    '<div style="display: flex; align-items: center; gap: 18px; flex-shrink: 0;">' +
-      '<div style="min-width: 0; flex: 1;">' +
-        '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 26px; color: #c2540a; line-height: 1; transform: rotate(-1deg);">' + esc(r.sub || 'nu op de buis') + '</div>' +
-        '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 60px; line-height: 1; letter-spacing: 0.08em; color: #2c3e35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(name) + '</div>' +
-      '</div>' +
-      logoHtml +
+    '<div style="flex-shrink: 0; padding-right: 200px;">' +
+      '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 26px; color: #c2540a; line-height: 1; transform: rotate(-1deg);">' + esc(r.sub || 'nu op de buis') + '</div>' +
+      '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 60px; line-height: 1; letter-spacing: 0.08em; color: #2c3e35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(name) + '</div>' +
     '</div>' +
     '<div style="border-top: 3px dashed rgba(74,67,55,0.3); margin: 12px 0 4px; flex-shrink: 0;"></div>' +
     body +
+    logoHtml +
     '<div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%) rotate(2deg); width: 120px; height: 28px; background: rgba(242,236,220,0.45); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"></div>' +
   '</div>';
 }
