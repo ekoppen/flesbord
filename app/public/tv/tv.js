@@ -91,14 +91,14 @@ function deriveTheme(d, now) {
 }
 
 function deriveStock(d) {
-  return (d.stock || []).map((s) => {
+  return (d.stock || []).filter((s) => s.on !== false).map((s) => {
     const low = Number(s.qty) <= 2;
     return { name: s.name, qty: s.qty, img: s.img || '', catCaps: (s.cat || '').toUpperCase(), chalkColor: low ? '#f4a259' : 'rgba(242,236,220,0.85)' };
   });
 }
 
 function deriveSnacks(d) {
-  return (d.snacks || []).map((s) => ({ name: s.name, img: s.img || '' }));
+  return (d.snacks || []).filter((s) => s.on !== false).map((s) => ({ name: s.name, img: s.img || '' }));
 }
 
 function stockThumbHtml(c, size) {

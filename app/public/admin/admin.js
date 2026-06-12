@@ -211,9 +211,16 @@ function cardTap(d) {
   '</div>';
 }
 
+function miniToggle(act, i, on) {
+  return '<button data-act="' + act + '" data-arg="' + i + '" aria-label="Tonen op TV" title="Tonen op TV" style="cursor: pointer; border: none; width: 46px; height: 27px; border-radius: 999px; background: ' + (on ? '#f4a259' : 'rgba(242,236,220,0.25)') + '; position: relative; padding: 0; flex-shrink: 0;">' +
+    '<div style="position: absolute; top: 3px; left: 3px; width: 21px; height: 21px; border-radius: 999px; background: #f2ecdc; box-shadow: 0 1px 3px rgba(0,0,0,0.35); transform: ' + (on ? 'translateX(19px)' : 'translateX(0)') + '; transition: transform 0.2s ease;"></div></button>';
+}
+
 function cardVoorraad(d) {
   const cats = ['Bier', 'Fris', 'Wijn', 'Sterk', 'Overig'];
   const rows = d.stock.map((s, i) => {
+    const on = s.on !== false;
+    const dim = on ? '1' : '0.4';
     const sInit = (s.name || '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '·';
     const sImgInner = s.img
       ? '<img src="' + esc(s.img) + '" alt="" style="width: 100%; height: 100%; object-fit: cover;">'
@@ -222,26 +229,28 @@ function cardVoorraad(d) {
       ? '<button data-act="rmStockLogo" data-arg="' + i + '" aria-label="Afbeelding verwijderen" title="Afbeelding verwijderen" style="position: absolute; top: -5px; right: -5px; cursor: pointer; width: 17px; height: 17px; border-radius: 999px; border: none; background: rgba(28,24,18,0.85); color: #f2ecdc; font-size: 9px; line-height: 1; padding: 0;">✕</button>'
       : '';
     return '<div class="stock-row">' +
-      '<div style="position: relative; width: 41px; height: 41px; align-self: center;">' +
+      '<div style="position: relative; width: 41px; height: 41px; align-self: center; opacity: ' + dim + ';">' +
         '<button data-act="pickStockLogo" data-arg="' + i + '" title="Afbeelding uploaden" style="cursor: pointer; width: 41px; height: 41px; border-radius: 999px; border: 2px solid rgba(242,236,220,0.3); background: #faf6ec; padding: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; box-sizing: border-box;">' + sImgInner + '</button>' +
         sImgRemove +
       '</div>' +
-      '<input class="in" data-bind="stock.' + i + '.name" value="' + esc(s.name) + '" placeholder="Naam">' +
-      '<select class="in" data-bind="stock.' + i + '.cat">' +
+      '<input class="in" data-bind="stock.' + i + '.name" value="' + esc(s.name) + '" placeholder="Naam" style="opacity: ' + dim + ';">' +
+      '<select class="in" data-bind="stock.' + i + '.cat" style="opacity: ' + dim + ';">' +
         cats.map((c) => '<option value="' + c + '"' + (s.cat === c ? ' selected' : '') + '>' + c + '</option>').join('') +
       '</select>' +
-      '<div style="display: flex; align-items: center; gap: 6px;">' +
+      '<div style="display: flex; align-items: center; gap: 6px; opacity: ' + dim + ';">' +
         '<button class="btn-step" data-act="qtyMinus" data-arg="' + i + '">−</button>' +
         '<div data-qty="' + i + '" style="flex: 1; text-align: center; font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 26px;">' + esc(s.qty) + '</div>' +
         '<button class="btn-step" data-act="qtyPlus" data-arg="' + i + '">+</button>' +
       '</div>' +
+      miniToggle('toggleStock', i, on) +
       '<button class="btn-x" data-act="rmStock" data-arg="' + i + '" aria-label="Verwijder">✕</button>' +
     '</div>';
   }).join('');
+  const onCount = d.stock.filter((s) => s.on !== false).length;
   return '<div class="card">' +
     '<div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px;">' +
-      '<div class="card-h">VOORRAAD</div>' +
-      '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 18px; color: rgba(242,236,220,0.55);">aantallen zijn voor je eigen overzicht — op TV staan alleen de namen</div>' +
+      '<div class="card-h">VOORRAAD <span style="font-size: 24px; color: rgba(242,236,220,0.55);">· ' + onCount + ' op TV</span></div>' +
+      '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 18px; color: rgba(242,236,220,0.55);">schakelaar bepaalt of het op TV staat · uit = blijft in je lijst</div>' +
     '</div>' +
     '<div class="stock-grid">' + rows + '</div>' +
     '<button class="btn-dash" data-act="addStock" style="margin-top: 14px;">+ ARTIKEL TOEVOEGEN</button>' +
@@ -250,6 +259,8 @@ function cardVoorraad(d) {
 
 function cardSnacks(d) {
   const rows = (d.snacks || []).map((s, i) => {
+    const on = s.on !== false;
+    const dim = on ? '1' : '0.4';
     const init = (s.name || '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '·';
     const imgInner = s.img
       ? '<img src="' + esc(s.img) + '" alt="" style="width: 100%; height: 100%; object-fit: cover;">'
@@ -258,23 +269,25 @@ function cardSnacks(d) {
       ? '<button data-act="rmSnackLogo" data-arg="' + i + '" aria-label="Afbeelding verwijderen" title="Afbeelding verwijderen" style="position: absolute; top: -5px; right: -5px; cursor: pointer; width: 17px; height: 17px; border-radius: 999px; border: none; background: rgba(28,24,18,0.85); color: #f2ecdc; font-size: 9px; line-height: 1; padding: 0;">✕</button>'
       : '';
     return '<div class="snack-row">' +
-      '<div style="position: relative; width: 41px; height: 41px; align-self: center;">' +
+      '<div style="position: relative; width: 41px; height: 41px; align-self: center; opacity: ' + dim + ';">' +
         '<button data-act="pickSnackLogo" data-arg="' + i + '" title="Afbeelding uploaden" style="cursor: pointer; width: 41px; height: 41px; border-radius: 999px; border: 2px solid rgba(242,236,220,0.3); background: #faf6ec; padding: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; box-sizing: border-box;">' + imgInner + '</button>' +
         imgRemove +
       '</div>' +
-      '<input class="in" data-bind="snacks.' + i + '.name" value="' + esc(s.name) + '" placeholder="Naam">' +
-      '<div style="display: flex; align-items: center; gap: 6px;">' +
+      '<input class="in" data-bind="snacks.' + i + '.name" value="' + esc(s.name) + '" placeholder="Naam" style="opacity: ' + dim + ';">' +
+      '<div style="display: flex; align-items: center; gap: 6px; opacity: ' + dim + ';">' +
         '<button class="btn-step" data-act="snackMinus" data-arg="' + i + '">−</button>' +
         '<div data-sqty="' + i + '" style="flex: 1; text-align: center; font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 26px;">' + esc(s.qty != null ? s.qty : 1) + '</div>' +
         '<button class="btn-step" data-act="snackPlus" data-arg="' + i + '">+</button>' +
       '</div>' +
+      miniToggle('toggleSnack', i, on) +
       '<button class="btn-x" data-act="rmSnack" data-arg="' + i + '" aria-label="Verwijder">✕</button>' +
     '</div>';
   }).join('');
+  const onCount = (d.snacks || []).filter((s) => s.on !== false).length;
   return '<div class="card">' +
     '<div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px;">' +
-      '<div class="card-h">HAPJES</div>' +
-      '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 18px; color: rgba(242,236,220,0.55);">op TV verschijnt alleen de naam (+ afbeelding)</div>' +
+      '<div class="card-h">HAPJES <span style="font-size: 24px; color: rgba(242,236,220,0.55);">· ' + onCount + ' op TV</span></div>' +
+      '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 18px; color: rgba(242,236,220,0.55);">schakelaar bepaalt of het op TV staat · uit = blijft in je lijst</div>' +
     '</div>' +
     '<div class="stock-grid">' + rows + '</div>' +
     '<button class="btn-dash" data-act="addSnack" style="margin-top: 14px;">+ HAPJE TOEVOEGEN</button>' +
@@ -954,10 +967,12 @@ document.addEventListener('click', (e) => {
     case 'mailTest': mailTest(); break;
     case 'pickRadioLogo': { pendingCrop = (src) => mut((d) => { d.radio.logo = src; }, true); const f = document.getElementById('logo-input'); if (f) f.click(); break; }
     case 'rmRadioLogo': mut((d) => { d.radio.logo = null; }, true); break;
-    case 'addStock': mut((d) => { d.stock.push({ id: D.uid(), name: '', cat: 'Bier', qty: 6 }); }, true); break;
+    case 'addStock': mut((d) => { d.stock.push({ id: D.uid(), name: '', cat: 'Bier', qty: 6, on: true }); }, true); break;
     case 'rmStock': mut((d) => { d.stock.splice(i, 1); }, true); break;
-    case 'addSnack': mut((d) => { if (!d.snacks) d.snacks = []; d.snacks.push({ id: D.uid(), name: '', qty: 1, img: null }); }, true); break;
+    case 'toggleStock': mut((d) => { d.stock[i].on = !(d.stock[i].on !== false); }, true); break;
+    case 'addSnack': mut((d) => { if (!d.snacks) d.snacks = []; d.snacks.push({ id: D.uid(), name: '', qty: 1, img: null, on: true }); }, true); break;
     case 'rmSnack': mut((d) => { d.snacks.splice(i, 1); }, true); break;
+    case 'toggleSnack': mut((d) => { d.snacks[i].on = !(d.snacks[i].on !== false); }, true); break;
     case 'snackMinus': {
       mut((d) => { d.snacks[i].qty = Math.max(0, Number(d.snacks[i].qty) - 1); });
       const el = cards.querySelector('[data-sqty="' + i + '"]');
