@@ -213,8 +213,19 @@ function cardTap(d) {
 
 function cardVoorraad(d) {
   const cats = ['Bier', 'Fris', 'Wijn', 'Sterk', 'Overig'];
-  const rows = d.stock.map((s, i) =>
-    '<div class="stock-row">' +
+  const rows = d.stock.map((s, i) => {
+    const sInit = (s.name || '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '·';
+    const sImgInner = s.img
+      ? '<img src="' + esc(s.img) + '" alt="" style="width: 100%; height: 100%; object-fit: cover;">'
+      : '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 17px; line-height: 1; color: #2c3e35;">' + esc(sInit) + '</div>';
+    const sImgRemove = s.img
+      ? '<button data-act="rmStockLogo" data-arg="' + i + '" aria-label="Afbeelding verwijderen" title="Afbeelding verwijderen" style="position: absolute; top: -5px; right: -5px; cursor: pointer; width: 17px; height: 17px; border-radius: 999px; border: none; background: rgba(28,24,18,0.85); color: #f2ecdc; font-size: 9px; line-height: 1; padding: 0;">✕</button>'
+      : '';
+    return '<div class="stock-row">' +
+      '<div style="position: relative; width: 41px; height: 41px; align-self: center;">' +
+        '<button data-act="pickStockLogo" data-arg="' + i + '" title="Afbeelding uploaden" style="cursor: pointer; width: 41px; height: 41px; border-radius: 999px; border: 2px solid rgba(242,236,220,0.3); background: #faf6ec; padding: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; box-sizing: border-box;">' + sImgInner + '</button>' +
+        sImgRemove +
+      '</div>' +
       '<input class="in" data-bind="stock.' + i + '.name" value="' + esc(s.name) + '" placeholder="Naam">' +
       '<select class="in" data-bind="stock.' + i + '.cat">' +
         cats.map((c) => '<option value="' + c + '"' + (s.cat === c ? ' selected' : '') + '>' + c + '</option>').join('') +
@@ -225,7 +236,8 @@ function cardVoorraad(d) {
         '<button class="btn-step" data-act="qtyPlus" data-arg="' + i + '">+</button>' +
       '</div>' +
       '<button class="btn-x" data-act="rmStock" data-arg="' + i + '" aria-label="Verwijder">✕</button>' +
-    '</div>').join('');
+    '</div>';
+  }).join('');
   return '<div class="card">' +
     '<div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px;">' +
       '<div class="card-h">VOORRAAD</div>' +
@@ -284,6 +296,18 @@ function cardThema(d) {
     '<div class="row2" style="gap: 12px; margin-bottom: 20px;">' +
       '<div><div class="lbl">TITEL</div><input class="in" data-bind="theme.title" value="' + esc(t.title) + '" style="width: 100%;"></div>' +
       '<div><div class="lbl">ONDERTITEL</div><input class="in" data-bind="theme.sub" value="' + esc(t.sub) + '" style="width: 100%;"></div>' +
+    '</div>' +
+    '<div class="lbl" style="margin-bottom: 8px;">EMBLEEM / WATERMERK (achter het Oranje-paneel)</div>' +
+    '<input type="file" id="emblem-input" accept="image/*" style="display: none;">' +
+    '<div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;">' +
+      '<div style="width: 72px; height: 72px; flex-shrink: 0; border: 2px solid rgba(242,236,220,0.25); border-radius: 12px; background: #2c3e35; display: flex; align-items: center; justify-content: center; overflow: hidden;">' +
+        (t.emblem
+          ? '<div style="width: 80%; height: 80%; background: #f4a259; -webkit-mask: url(' + t.emblem + ') center/contain no-repeat; mask: url(' + t.emblem + ') center/contain no-repeat;"></div>'
+          : '<div style="width: 84%; height: 84%; opacity: 0.85;">' + D.LION_SVG + '</div>') +
+      '</div>' +
+      '<button class="btn-dash" data-act="pickEmblem" style="font-size: 18px; padding: 8px 16px;">' + (t.emblem ? 'ANDER EMBLEEM' : 'EMBLEEM UPLOADEN') + '</button>' +
+      (t.emblem ? '<button class="btn-ghost" data-act="rmEmblem">Terug naar de leeuw</button>' : '') +
+      '<div style="font-size: 14px; color: rgba(242,236,220,0.5); line-height: 1.5; flex: 1; min-width: 160px;">Transparante PNG werkt het mooist — de TV toont het in diapositief oranje. Leeg = de ingebouwde leeuw.</div>' +
     '</div>' +
     '<div class="lbl" style="margin-bottom: 8px;">SCHEMA &amp; STAND VIA API — TheSportsDB</div>' +
     '<div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1.4fr; gap: 12px;">' +
@@ -428,11 +452,11 @@ async function addFiles(fileList) {
   setStatus('photo', newPhotos.length ? '' : 'Uploaden mislukt — probeer het opnieuw.');
 }
 
-// Eigen bierlogo: avatar-editor — slepen en zoomen binnen een rond masker,
-// daarna vierkant bijgesneden (240px) bij het bier opslaan.
-let logoTapIdx = null;
+// Avatar-editor — slepen en zoomen binnen een rond masker, daarna vierkant
+// bijgesneden (240px). Hergebruikt voor bierlogo's én voorraad-afbeeldingen.
+let pendingCrop = null; // (dataURL) => void, ingesteld vlak voor het kiezen
 
-function openLogoEditor(i, file) {
+function openLogoEditor(file, onSave) {
   const M = 280, OUT = 240;            // maskergrootte op scherm / uitvoer in px
   const url = URL.createObjectURL(file);
   const img = new Image();
@@ -519,7 +543,7 @@ function openLogoEditor(i, file) {
       if (!isPng) { ctx.fillStyle = '#faf6ec'; ctx.fillRect(0, 0, OUT, OUT); }
       ctx.drawImage(img, -x / s, -y / s, M / s, M / s, 0, 0, OUT, OUT);
       const src = isPng ? cv.toDataURL('image/png') : cv.toDataURL('image/jpeg', 0.85);
-      mut((d) => { if (d.taps[i]) d.taps[i].logo = src; }, true);
+      if (onSave) onSave(src);
       close();
     });
     apply();
@@ -529,8 +553,31 @@ function openLogoEditor(i, file) {
 
 function addLogoFile(fileList) {
   const f = (fileList && fileList[0]) || null;
-  if (!f || logoTapIdx == null) return;
-  openLogoEditor(logoTapIdx, f);
+  if (!f || !pendingCrop) return;
+  openLogoEditor(f, pendingCrop);
+  pendingCrop = null;
+}
+
+// Embleem/watermerk (bv. de KNVB-leeuw): transparante PNG, verkleind opgeslagen
+// (geen bijsnijden — de transparantie bepaalt de vorm; TV kleurt het oranje).
+async function addEmblemFile(fileList) {
+  const f = (fileList && fileList[0]) || null;
+  if (!f) return;
+  try {
+    const url = URL.createObjectURL(f);
+    const img = await new Promise((res, rej) => {
+      const im = new Image();
+      im.onload = () => res(im); im.onerror = rej; im.src = url;
+    });
+    const maxSide = 512;
+    const ratio = Math.min(1, maxSide / Math.max(img.width, img.height));
+    const cw = Math.round(img.width * ratio), ch = Math.round(img.height * ratio);
+    const cv = document.createElement('canvas');
+    cv.width = cw; cv.height = ch;
+    cv.getContext('2d').drawImage(img, 0, 0, cw, ch);
+    URL.revokeObjectURL(url);
+    mut((d) => { d.theme.emblem = cv.toDataURL('image/png'); }, true);
+  } catch (e) { /* onleesbaar bestand: niets doen */ }
 }
 
 // ---------- events (delegatie) ----------
@@ -558,6 +605,10 @@ document.addEventListener('change', (e) => {
     addLogoFile(e.target.files);
     e.target.value = '';
   }
+  if (e.target.id === 'emblem-input') {
+    addEmblemFile(e.target.files);
+    e.target.value = '';
+  }
 });
 
 document.addEventListener('keydown', (e) => {
@@ -579,8 +630,12 @@ document.addEventListener('click', (e) => {
     case 'addTap': mut((d) => { d.taps.push({ id: D.uid(), name: '', style: '', price: '', level: 100, onTap: true }); }, true); break;
     case 'rmTap': mut((d) => { d.taps.splice(i, 1); }, true); break;
     case 'toggleTap': mut((d) => { d.taps[i].onTap = !(d.taps[i].onTap !== false); }, true); break;
-    case 'pickLogo': { logoTapIdx = i; const f = document.getElementById('logo-input'); if (f) f.click(); break; }
+    case 'pickLogo': { pendingCrop = (src) => mut((d) => { if (d.taps[i]) d.taps[i].logo = src; }, true); const f = document.getElementById('logo-input'); if (f) f.click(); break; }
     case 'rmLogo': mut((d) => { delete d.taps[i].logo; }, true); break;
+    case 'pickStockLogo': { pendingCrop = (src) => mut((d) => { if (d.stock[i]) d.stock[i].img = src; }, true); const f = document.getElementById('logo-input'); if (f) f.click(); break; }
+    case 'rmStockLogo': mut((d) => { delete d.stock[i].img; }, true); break;
+    case 'pickEmblem': { const f = document.getElementById('emblem-input'); if (f) f.click(); break; }
+    case 'rmEmblem': mut((d) => { d.theme.emblem = null; }, true); break;
     case 'addStock': mut((d) => { d.stock.push({ id: D.uid(), name: '', cat: 'Bier', qty: 6 }); }, true); break;
     case 'rmStock': mut((d) => { d.stock.splice(i, 1); }, true); break;
     case 'qtyMinus': {

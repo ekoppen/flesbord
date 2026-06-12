@@ -93,8 +93,13 @@ function deriveTheme(d, now) {
 function deriveStock(d) {
   return (d.stock || []).map((s) => {
     const low = Number(s.qty) <= 2;
-    return { name: s.name, qty: s.qty, catCaps: (s.cat || '').toUpperCase(), chalkColor: low ? '#f4a259' : 'rgba(242,236,220,0.85)' };
+    return { name: s.name, qty: s.qty, img: s.img || '', catCaps: (s.cat || '').toUpperCase(), chalkColor: low ? '#f4a259' : 'rgba(242,236,220,0.85)' };
   });
+}
+
+function stockThumbHtml(c, size) {
+  if (!c.img) return '';
+  return '<div style="width: ' + size + 'px; height: ' + size + 'px; flex-shrink: 0; border-radius: 50%; background: #faf6ec; overflow: hidden; box-shadow: 0 3px 8px rgba(0,0,0,0.3);"><img src="' + esc(c.img) + '" alt="" style="width: 100%; height: 100%; object-fit: cover;"></div>';
 }
 
 function deriveTaps(d) {
@@ -151,6 +156,16 @@ function logoCoasterHtml(t, size) {
     ? '<img src="' + esc(t.logoSrc) + '" alt="" style="' + imgStyle + '">'
     : '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: ' + initialsSize + 'px; line-height: 1; color: #2c3e35;">' + esc(t.initials) + '</div>';
   return '<div data-logo-for="' + esc(t.logoKey) + '" style="width: ' + size + 'px; height: ' + size + 'px; flex-shrink: 0; border-radius: 50%; background: #faf6ec; box-shadow: 0 ' + (size > 70 ? '6px 16px rgba(0,0,0,0.4)' : '5px 12px rgba(0,0,0,0.35)') + '; transform: rotate(-2deg); display: flex; align-items: center; justify-content: center; overflow: hidden;">' + inner + '</div>';
+}
+
+// ---------- embleem / watermerk (diapositief oranje) achter het Oranje-paneel ----------
+
+function emblemWatermark(d, css) {
+  const emblem = d.theme && d.theme.emblem;
+  const inner = emblem
+    ? '<div style="width: 100%; height: 100%; background: #f4a259; -webkit-mask: url(' + emblem + ') center/contain no-repeat; mask: url(' + emblem + ') center/contain no-repeat;"></div>'
+    : D.LION_SVG;
+  return '<div aria-hidden="true" style="position: absolute; ' + css + '; opacity: 0.13; z-index: 0; pointer-events: none;">' + inner + '</div>';
 }
 
 // Wat er in de muziek-pil hoort. null = pil helemaal verbergen:
@@ -328,7 +343,10 @@ function rasterHtml(d) {
   const stock = deriveStock(d);
 
   const stockRows = stock.map((c) =>
-    '<div style="border-bottom: 2px dotted rgba(242,236,220,0.3); padding: 5px 2px; font-size: 24px; color: rgba(242,236,220,0.92); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(c.name) + '</div>').join('');
+    '<div style="display: flex; align-items: center; gap: 10px; border-bottom: 2px dotted rgba(242,236,220,0.3); padding: 5px 2px;">' +
+      stockThumbHtml(c, 30) +
+      '<div style="font-size: 24px; color: rgba(242,236,220,0.92); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(c.name) + '</div>' +
+    '</div>').join('');
 
   // Eén bier op de tap: het viltje groot in de kop van de kaart i.p.v. klein per regel
   const singleTap = taps.length === 1 ? taps[0] : null;
@@ -377,17 +395,20 @@ function rasterHtml(d) {
     : '';
 
   const themePanel = t.enabled
-    ? '<div style="flex: 1; min-height: 0; border: 2px solid rgba(242,236,220,0.3); border-radius: 12px; padding: 22px 26px; display: flex; flex-direction: column; overflow: hidden;">' +
-        '<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px;">' +
-          '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 46px; line-height: 1; letter-spacing: 0.06em; color: #f2ecdc;">' + esc(t.titleCaps) + '</div>' +
-          '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 26px; color: #f4a259;">' + esc(t.sub) + '</div>' +
-        '</div>' +
-        nextBlock +
-        '<div style="display: flex; flex-direction: column; margin-top: 8px;">' + matchRows + '</div>' +
-        '<div style="margin-top: auto; padding-top: 10px;">' +
-          '<div style="display: flex; gap: 14px; font-size: 14px; letter-spacing: 0.2em; color: rgba(242,236,220,0.5); padding: 0 2px 4px;">' +
-            '<div style="width: 22px;">#</div><div style="flex: 1;">LAND</div><div style="width: 30px; text-align: right;">G</div><div style="width: 30px; text-align: right;">P</div>' +
-          '</div>' + standingRows +
+    ? '<div style="flex: 1; min-height: 0; border: 2px solid rgba(242,236,220,0.3); border-radius: 12px; padding: 22px 26px; display: flex; flex-direction: column; overflow: hidden; position: relative;">' +
+        emblemWatermark(d, 'right: -26px; bottom: -16px; width: 286px; height: 308px') +
+        '<div style="position: relative; z-index: 1; display: flex; flex-direction: column; flex: 1; min-height: 0;">' +
+          '<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px;">' +
+            '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 46px; line-height: 1; letter-spacing: 0.06em; color: #f2ecdc;">' + esc(t.titleCaps) + '</div>' +
+            '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 26px; color: #f4a259;">' + esc(t.sub) + '</div>' +
+          '</div>' +
+          nextBlock +
+          '<div style="display: flex; flex-direction: column; margin-top: 8px;">' + matchRows + '</div>' +
+          '<div style="margin-top: auto; padding-top: 10px;">' +
+            '<div style="display: flex; gap: 14px; font-size: 14px; letter-spacing: 0.2em; color: rgba(242,236,220,0.5); padding: 0 2px 4px;">' +
+              '<div style="width: 22px;">#</div><div style="flex: 1;">LAND</div><div style="width: 30px; text-align: right;">G</div><div style="width: 30px; text-align: right;">P</div>' +
+            '</div>' + standingRows +
+          '</div>' +
         '</div>' +
       '</div>'
     : '';
@@ -475,12 +496,13 @@ function mainPanelHtml(d, panel) {
         '</div>'
       : '';
     return '<div style="position: absolute; inset: 0; padding: 50px 70px; box-sizing: border-box; display: grid; grid-template-columns: 1fr 600px; gap: 70px; animation: defles-fade 0.7s ease;">' +
-      '<div style="display: flex; flex-direction: column; justify-content: center;">' +
+      emblemWatermark(d, 'left: -20px; bottom: -30px; width: 520px; height: 560px') +
+      '<div style="position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: center;">' +
         '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 38px; color: #f4a259; line-height: 1; transform: rotate(-1deg);">' + esc(t.sub) + '</div>' +
         '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 120px; line-height: 0.95; letter-spacing: 0.05em; color: #f2ecdc; margin-top: 6px; text-shadow: 0 0 18px rgba(242,236,220,0.2);">' + esc(t.titleCaps) + '</div>' +
         nextBlock +
       '</div>' +
-      '<div style="display: flex; flex-direction: column; justify-content: center; gap: 28px;">' +
+      '<div style="position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: center; gap: 28px;">' +
         '<div><div style="font-size: 16px; letter-spacing: 0.26em; color: rgba(242,236,220,0.5); margin-bottom: 6px;">PROGRAMMA</div>' + matchRows + '</div>' +
         '<div>' +
           '<div style="display: flex; gap: 16px; font-size: 15px; letter-spacing: 0.2em; color: rgba(242,236,220,0.5); padding: 0 2px 6px;">' +
@@ -492,9 +514,12 @@ function mainPanelHtml(d, panel) {
   }
   // panel === 'stock'
   const chips = deriveStock(d).map((c) =>
-    '<div style="border: 2px solid rgba(242,236,220,0.25); border-radius: 12px; padding: 18px 22px;">' +
-      '<div style="font-size: 15px; letter-spacing: 0.22em; color: rgba(242,236,220,0.5);">' + esc(c.catCaps) + '</div>' +
-      '<div style="font-size: 27px; color: #f2ecdc; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(c.name) + '</div>' +
+    '<div style="border: 2px solid rgba(242,236,220,0.25); border-radius: 12px; padding: 18px 22px; display: flex; align-items: center; gap: 16px;">' +
+      stockThumbHtml(c, 52) +
+      '<div style="min-width: 0;">' +
+        '<div style="font-size: 15px; letter-spacing: 0.22em; color: rgba(242,236,220,0.5);">' + esc(c.catCaps) + '</div>' +
+        '<div style="font-size: 27px; color: #f2ecdc; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(c.name) + '</div>' +
+      '</div>' +
     '</div>').join('');
   return '<div style="position: absolute; inset: 0; padding: 50px 70px; box-sizing: border-box; animation: defles-fade 0.7s ease;">' +
     '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 36px; color: #f4a259; line-height: 1; transform: rotate(-1deg);">koud &amp; klaar</div>' +

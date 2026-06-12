@@ -37,6 +37,7 @@ export const DEFAULT_STATE = {
     enabled: true,
     title: 'WK 2026',
     sub: 'Groep F · Oranje',
+    emblem: null, // eigen embleem/watermerk (transparante PNG); leeg = ingebouwde leeuw
     api: { key: '123', league: '4429', season: '2026', team: 'Netherlands' },
     lastSync: 0,
     matches: [
@@ -52,6 +53,38 @@ export const DEFAULT_STATE = {
     ]
   }
 };
+
+// Ingebouwde leeuw (heraldisch, rampant) — opgebouwd uit vormen met een
+// gekartelde manen-ring. Wordt diapositief oranje getoond achter het Oranje-paneel.
+function maneStarPath(cx, cy, outer, inner, points) {
+  let d = '';
+  for (let i = 0; i < points * 2; i++) {
+    const r = i % 2 ? inner : outer;
+    const a = (Math.PI * i) / points - Math.PI / 2;
+    d += (i ? 'L' : 'M') + (cx + r * Math.cos(a)).toFixed(1) + ' ' + (cy + r * Math.sin(a)).toFixed(1);
+  }
+  return d + 'Z';
+}
+export const LION_SVG =
+  '<svg viewBox="0 0 240 280" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="width: 100%; height: 100%;">' +
+    '<g fill="#f4a259" stroke="#f4a259" stroke-linejoin="round" stroke-linecap="round">' +
+      '<path fill="none" stroke-width="15" d="M176 150 C212 150 226 108 214 76 C209 62 196 57 188 66"/>' +
+      '<circle cx="187" cy="63" r="12"/>' +
+      '<ellipse cx="158" cy="168" rx="45" ry="52"/>' +
+      '<rect x="134" y="188" width="30" height="74" rx="15"/>' +
+      '<ellipse cx="150" cy="262" rx="19" ry="11"/>' +
+      '<g transform="rotate(-16 118 132)"><ellipse cx="118" cy="132" rx="45" ry="60"/></g>' +
+      '<path fill="none" stroke-width="25" d="M104 112 72 170"/>' +
+      '<path fill="none" stroke-width="22" d="M122 120 102 184"/>' +
+      '<ellipse cx="68" cy="176" rx="17" ry="11"/>' +
+      '<ellipse cx="99" cy="190" rx="16" ry="11"/>' +
+      '<path d="' + maneStarPath(74, 66, 53, 39, 13) + '"/>' +
+      '<circle cx="72" cy="64" r="30"/>' +
+      '<circle cx="53" cy="37" r="11"/>' +
+      '<circle cx="92" cy="38" r="10"/>' +
+      '<ellipse cx="43" cy="76" rx="20" ry="15"/>' +
+    '</g>' +
+  '</svg>';
 
 export function deepMerge(def, val) {
   if (Array.isArray(def)) return Array.isArray(val) ? val : def;
