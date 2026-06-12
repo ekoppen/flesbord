@@ -159,13 +159,14 @@ function cardTap(d) {
     const initials = (t.name || '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '·';
     const logoInner = t.logo
       ? '<img src="' + esc(t.logo) + '" alt="" style="width: 80%; height: 80%; object-fit: contain;">'
-      : '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 21px; line-height: 1; color: #2c3e35;">' + esc(initials) + '</div>';
+      : '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 19px; line-height: 1; color: #2c3e35;">' + esc(initials) + '</div>';
     const logoRemove = t.logo
-      ? '<button data-act="rmLogo" data-arg="' + i + '" aria-label="Eigen logo verwijderen" title="Eigen logo verwijderen" style="position: absolute; top: -6px; right: -6px; cursor: pointer; width: 20px; height: 20px; border-radius: 999px; border: none; background: rgba(28,24,18,0.85); color: #f2ecdc; font-size: 10px; line-height: 1; padding: 0;">✕</button>'
+      ? '<button data-act="rmLogo" data-arg="' + i + '" aria-label="Eigen logo verwijderen" title="Eigen logo verwijderen" style="position: absolute; top: -5px; right: -5px; cursor: pointer; width: 17px; height: 17px; border-radius: 999px; border: none; background: rgba(28,24,18,0.85); color: #f2ecdc; font-size: 9px; line-height: 1; padding: 0;">✕</button>'
       : '';
     return '<div class="tap-row">' +
-      '<div style="position: relative; width: 48px; height: 48px; opacity: ' + dim + ';">' +
-        '<button data-act="pickLogo" data-arg="' + i + '" title="Eigen logo uploaden" style="cursor: pointer; width: 48px; height: 48px; border-radius: 999px; border: 2px solid rgba(242,236,220,0.3); background: #faf6ec; padding: 0; display: flex; align-items: center; justify-content: center; overflow: hidden;">' + logoInner + '</button>' +
+      // even hoog als de invoervelden, zodat de rij strak uitlijnt
+      '<div style="position: relative; width: 41px; height: 41px; align-self: center; opacity: ' + dim + ';">' +
+        '<button data-act="pickLogo" data-arg="' + i + '" title="Eigen logo uploaden" style="cursor: pointer; width: 41px; height: 41px; border-radius: 999px; border: 2px solid rgba(242,236,220,0.3); background: #faf6ec; padding: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; box-sizing: border-box;">' + logoInner + '</button>' +
         logoRemove +
       '</div>' +
       '<input class="in" data-bind="taps.' + i + '.name" value="' + esc(t.name) + '" placeholder="Naam" style="opacity: ' + dim + ';">' +

@@ -147,13 +147,19 @@ function logoCoasterHtml(t, size, initialsSize) {
   return '<div data-logo-for="' + esc(t.logoKey) + '" style="width: ' + size + 'px; height: ' + size + 'px; flex-shrink: 0; border-radius: 50%; background: #faf6ec; box-shadow: 0 ' + (size > 70 ? '6px 16px rgba(0,0,0,0.4)' : '5px 12px rgba(0,0,0,0.35)') + '; transform: rotate(-2deg); display: flex; align-items: center; justify-content: center; overflow: hidden;">' + inner + '</div>';
 }
 
-function musicVals(d) {
-  const lm = app.liveMusic && app.liveMusic.track ? app.liveMusic : null;
-  return {
-    track: lm ? lm.track : d.music.track,
-    artist: lm ? lm.artist : d.music.artist,
-    sourceCaps: lm ? lm.sourceCaps : 'NU OP ' + (d.music.source || '').toUpperCase()
-  };
+// Wat er in de muziek-pil hoort. null = pil helemaal verbergen:
+// bij Volumio/Spotify alleen tonen als er ook écht iets speelt.
+function musicView(d) {
+  if (!d || !d.showMusic) return null;
+  const mode = (d.music && d.music.mode) || 'handmatig';
+  if (mode === 'handmatig') {
+    return {
+      track: d.music.track, artist: d.music.artist,
+      sourceCaps: 'NU OP ' + (d.music.source || '').toUpperCase()
+    };
+  }
+  const lm = app.liveMusic;
+  return lm && lm.playing && lm.track ? lm : null;
 }
 
 function panelsFor(d) {
@@ -182,8 +188,8 @@ function weatherHtml(big) {
 }
 
 function musicPillHtml(d, big) {
-  if (!d.showMusic) return '<div style="margin-left: auto;"></div>';
-  const m = musicVals(d);
+  const m = musicView(d);
+  if (!m) return '';
   const eq = big ? eqHtml(44, 7, '#c2540a') : eqHtml(32, 5.5, '#c2540a');
   return '<div style="margin-left: auto; display: flex; align-items: center; gap: ' + (big ? 22 : 18) + 'px; background: #f2ecdc; border-radius: 999px; padding: ' + (big ? '16px 34px' : '13px 28px') + '; max-width: ' + (big ? 620 : 540) + 'px; box-shadow: 0 8px 22px rgba(0,0,0,0.35); transform: rotate(-0.6deg);">' +
     '<div>' + eq + '</div>' +
@@ -538,7 +544,18 @@ function applyPhoto() {
 function applyMusic() {
   const d = app.data;
   if (!d) return;
-  const m = musicVals(d);
+  const slot = board.querySelector('[data-music-slot]');
+  if (!slot) return;
+  const m = musicView(d);
+  const hasPill = !!slot.querySelector('[data-music-track]');
+  if (!m) {
+    if (hasPill) slot.innerHTML = '';   // niets aan het spelen: pil weg
+    return;
+  }
+  if (!hasPill) {
+    slot.innerHTML = musicPillHtml(d, d.variant !== 'roterend');
+    return;
+  }
   setText('[data-music-track]', m.track);
   setText('[data-music-artist]', m.artist);
   setText('[data-music-source]', m.sourceCaps);
