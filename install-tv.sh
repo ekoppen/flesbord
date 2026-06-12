@@ -49,49 +49,71 @@ echo "    2. Instellingen → Systeem → Ontwikkelaarsopties"
 echo "    3. Zet 'Foutopsporing via USB' aan, en — indien aanwezig —"
 echo "       'Draadloze foutopsporing' (Wireless debugging)"
 echo
-TVIP="$(ask "Wat is het IP-adres van de TV? (Instellingen → Netwerk en internet):")"
+TVIP_IN="$(ask "Wat is het IP-adres van de TV? (Instellingen → Netwerk en internet):")"
+TVIP="${TVIP_IN%%:*}"   # eventueel meegetypte poort weghalen
 [ -n "$TVIP" ] || err "Geen IP-adres opgegeven."
 
-state_of() { adb devices | awk -v d="$1" '$1 == d { print $2 }'; }
+# Bij draadloze foutopsporing kan de TV onder zijn mDNS-naam in 'adb devices'
+# staan i.p.v. ip:poort — zoek daarom gewoon het eerste geautoriseerde apparaat.
+any_device() { adb devices | awk 'NR > 1 && $2 == "device" { print $1; exit }'; }
+any_unauthorized() { adb devices | awk 'NR > 1 && $2 == "unauthorized" { print $1; exit }'; }
 
 DEV=""
-# Eerst de klassieke route proberen (poort 5555, werkt op de meeste Android TV's)
-msg "Verbinden met $TVIP:5555…"
-adb disconnect >/dev/null 2>&1 || true
-if adb connect "$TVIP:5555" 2>/dev/null | grep -q "connected"; then
-  DEV="$TVIP:5555"
+wait_device() { # $1 = max seconden wachten
+  local i hinted=""
+  for i in $(seq 1 $(( ${1} / 2 ))); do
+    DEV="$(any_device)"
+    [ -n "$DEV" ] && return 0
+    if [ -z "$hinted" ] && [ -n "$(any_unauthorized)" ]; then
+      note "Bevestig de popup 'USB-foutopsporing toestaan?' op de TV (vink 'altijd toestaan' aan)."
+      hinted=1
+    fi
+    sleep 2
+  done
+  return 1
+}
+
+# Misschien is de TV al verbonden (bv. van een eerdere keer)
+DEV="$(any_device)"
+
+# Zo niet: eerst de klassieke route proberen (poort 5555)
+if [ -z "$DEV" ]; then
+  msg "Verbinden met $TVIP:5555…"
+  adb connect "$TVIP:5555" >/dev/null 2>&1 || true
+  wait_device 8 || true
 fi
 
-# Lukt dat niet: pairing-route (Android 11+ / Chromecast met Google TV)
-if [ -z "$DEV" ] || [ "$(state_of "$DEV")" = "" ]; then
+# Nog niet verbonden: route via 'Draadloze foutopsporing' (Chromecast/Google TV)
+if [ -z "$DEV" ]; then
   echo
-  note "Directe verbinding lukte niet — we gaan koppelen (pairing)."
-  echo "    Open op de TV: Ontwikkelaarsopties → Draadloze foutopsporing → AAN"
-  echo "    Kies daar: 'Apparaat koppelen met koppelingscode'."
-  echo "    Op de TV verschijnen nu een koppelingscode en een ip:poort."
+  note "Directe verbinding lukte niet — we gebruiken 'Draadloze foutopsporing'."
+  echo "    Open op de TV: Ontwikkelaarsopties → Draadloze foutopsporing → AAN."
+  echo "    Op dat scherm staat een verbindingsadres (ip:poort)."
+  echo "    Is deze computer nog nooit gekoppeld? Druk dan zo Enter om eerst"
+  echo "    te koppelen met een koppelingscode."
   echo
-  PAIR_ADDR="$(ask "Koppel-adres van dat scherm (ip:poort, bv. $TVIP:40123):")"
-  PAIR_CODE="$(ask "Koppelingscode (6 cijfers):")"
-  adb pair "$PAIR_ADDR" "$PAIR_CODE" || err "Koppelen mislukt — controleer code en adres en probeer opnieuw."
-  echo
-  echo "    Sluit het koppel-venster op de TV. Op het hoofdscherm van"
-  echo "    'Draadloze foutopsporing' staat het gewone verbindings-ip:poort."
-  CONN_ADDR="$(ask "Verbindingsadres (ip:poort, bv. $TVIP:42345):")"
+  CONN_ADDR="$(ask "Verbindingsadres (ip:poort — of Enter om eerst te koppelen):")"
+  if [ -z "$CONN_ADDR" ]; then
+    echo "    Kies op de TV: 'Apparaat koppelen met koppelingscode'."
+    echo "    Er verschijnen nu een 6-cijferige code en een koppel-adres (ip:poort)."
+    echo
+    PAIR_ADDR="$(ask "Koppel-adres (ip:poort):")"
+    PAIR_CODE="$(ask "Koppelingscode (6 cijfers):")"
+    adb pair "$PAIR_ADDR" "$PAIR_CODE" || err "Koppelen mislukt — controleer code en adres en probeer opnieuw."
+    echo
+    echo "    Gelukt. Terug op het hoofdscherm van 'Draadloze foutopsporing'"
+    echo "    staat het gewone verbindingsadres (andere poort dan het koppel-adres)."
+    CONN_ADDR="$(ask "Verbindingsadres (ip:poort):")"
+  fi
   adb connect "$CONN_ADDR" >/dev/null 2>&1 || true
-  DEV="$CONN_ADDR"
 fi
 
-# Wachten tot de TV de verbinding accepteert (popup op de TV)
-msg "Wachten op toestemming van de TV…"
-for i in $(seq 1 30); do
-  ST="$(state_of "$DEV")"
-  case "$ST" in
-    device) break ;;
-    unauthorized) [ "$i" = 1 ] && note "Bevestig de popup 'USB-foutopsporing toestaan?' op de TV (vink 'altijd toestaan' aan)." ;;
-  esac
-  sleep 2
-done
-[ "$(state_of "$DEV")" = "device" ] || err "Geen geautoriseerde verbinding met $DEV. Controleer de popup op de TV en draai het script opnieuw."
+# Wachten tot er een geautoriseerd apparaat is (popup op de TV)
+if [ -z "$DEV" ]; then
+  msg "Wachten op toestemming van de TV…"
+  wait_device 60 || err "Geen geautoriseerde verbinding. Controleer de popup op de TV en draai het script opnieuw."
+fi
+msg "Verbonden met: $DEV"
 
 # ---- 4. Installeren en starten ----
 msg "App installeren…"
