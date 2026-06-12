@@ -125,6 +125,25 @@ public class MainActivity extends Activity {
         super.onPause();
     }
 
+    // D-pad links/rechts gaat rechtstreeks naar het bord: bladeren door de
+    // grote weergaven. Onderschept vóór de WebView, anders gebruikt die de
+    // pijltjes voor focus-navigatie.
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getAction() == KeyEvent.ACTION_DOWN && web != null && !dialogOpen) {
+            int kc = event.getKeyCode();
+            if (kc == KeyEvent.KEYCODE_DPAD_RIGHT || kc == KeyEvent.KEYCODE_MEDIA_NEXT) {
+                web.evaluateJavascript("window.deflesRemote&&window.deflesRemote('next')", null);
+                return true;
+            }
+            if (kc == KeyEvent.KEYCODE_DPAD_LEFT || kc == KeyEvent.KEYCODE_MEDIA_PREVIOUS) {
+                web.evaluateJavascript("window.deflesRemote&&window.deflesRemote('prev')", null);
+                return true;
+            }
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {

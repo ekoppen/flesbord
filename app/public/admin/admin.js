@@ -52,8 +52,22 @@ function cardScherm(d) {
       '<div style="font-size: 15px; color: rgba(242,236,220,0.6); margin-top: 2px; line-height: 1.35;">' + v.desc + '</div>' +
     '</button>';
   }).join('');
+  const pm = d.panelMode || 'auto';
+  const pmPills = [
+    { key: 'auto', label: 'AUTOMATISCH' },
+    { key: 'handmatig', label: 'HANDMATIG' }
+  ].map((m) => {
+    const on = pm === m.key;
+    return '<button data-act="panelMode" data-arg="' + m.key + '" style="flex: 1; cursor: pointer; background: ' +
+      (on ? 'rgba(244,162,89,0.14)' : 'transparent') + '; border: 2px solid ' + (on ? '#f4a259' : 'rgba(242,236,220,0.3)') +
+      '; border-radius: 999px; padding: 7px 10px; font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 21px; letter-spacing: 0.05em; color: #f2ecdc;">' + m.label + '</button>';
+  }).join('');
   return '<div class="card"><div class="card-h" style="margin-bottom: 14px;">SCHERMINDELING</div>' +
-    '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">' + tiles + '</div></div>';
+    '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">' + tiles + '</div>' +
+    '<div class="lbl" style="margin: 16px 0 6px;">GROTE WEERGAVEN WISSELEN</div>' +
+    '<div style="display: flex; gap: 8px;">' + pmPills + '</div>' +
+    '<div style="font-size: 14px; color: rgba(242,236,220,0.5); margin-top: 10px; line-height: 1.5;">Bladeren kan altijd met ◀ ▶ op de afstandsbediening van de Chromecast; bij Handmatig wisselt het scherm verder niet vanzelf.</div>' +
+  '</div>';
 }
 
 function cardWeer(d) {
@@ -477,6 +491,7 @@ document.addEventListener('click', (e) => {
   const i = Number(arg);
   switch (act) {
     case 'variant': mut((d) => { d.variant = arg; }, true); break;
+    case 'panelMode': mut((d) => { d.panelMode = arg; }, true); break;
     case 'mode': mut((d) => { d.music.mode = arg; }, true); break;
     case 'toggleMusic': mut((d) => { d.showMusic = !d.showMusic; }, true); break;
     case 'toggleTheme': mut((d) => { d.theme.enabled = !d.theme.enabled; }, true); break;

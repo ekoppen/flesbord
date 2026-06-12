@@ -21,6 +21,7 @@ try {
 } catch (e) { /* leeg */ }
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const mod = (i, n) => (n > 0 ? ((i % n) + n) % n : 0);
 
 // ---------- bouwstenen ----------
 
@@ -244,8 +245,8 @@ function polaroidHtml(d, raster) {
     return '<div style="width: 100%; height: 100%; border: 3px dashed rgba(242,236,220,0.3); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">' +
       '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 32px; color: rgba(242,236,220,0.55);">Nog geen foto’s — voeg ze toe via het beheerscherm</div></div>';
   }
-  const p = photos[app.photoIdx % photos.length];
-  const dots = dotsHtml(photos.length, app.photoIdx % photos.length, 'light');
+  const p = photos[mod(app.photoIdx, photos.length)];
+  const dots = dotsHtml(photos.length, mod(app.photoIdx, photos.length), 'light');
   if (raster) {
     return '<div style="width: 100%; height: 100%; min-height: 0; background: #faf6ec; padding: 16px 16px 64px; box-sizing: border-box; transform: rotate(-1.2deg); box-shadow: 0 10px 30px rgba(0,0,0,0.4); display: flex; flex-direction: column; position: relative;">' +
       '<div style="flex: 1; min-height: 0; overflow: hidden; position: relative; background: #ddd6c6;">' +
@@ -311,7 +312,7 @@ function midSlotHtml(d) {
     return '<div style="width: 100%; height: 100%; border: 3px dashed rgba(242,236,220,0.3); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">' +
       '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 32px; color: rgba(242,236,220,0.55);">Nog geen foto’s — voeg ze toe via het beheerscherm</div></div>';
   }
-  const active = views[app.middenIdx % views.length];
+  const active = views[mod(app.middenIdx, views.length)];
   return active === 'wk' ? wkPosterHtml(d, now) : polaroidHtml(d, true);
 }
 
@@ -492,7 +493,7 @@ function mainPanelHtml(d, panel) {
 
 function roterendHtml(d) {
   const panels = panelsFor(d);
-  const active = panels[app.panelIdx % panels.length];
+  const active = panels[mod(app.panelIdx, panels.length)];
   const mededeling = (d.mededeling || '').trim();
   const mededelingBlock = mededeling
     ? '<div style="flex: 1; min-width: 0; border: 3px double rgba(244,162,89,0.75); border-radius: 12px; padding: 12px 26px; display: flex; align-items: center; gap: 22px;">' +
@@ -507,7 +508,7 @@ function roterendHtml(d) {
     '</div>' +
     '<div style="display: flex; align-items: center; gap: 24px; flex-shrink: 0;">' +
       mededelingBlock +
-      '<div data-panel-dots style="flex-shrink: 0; display: flex;">' + dotsHtml(panels.length, app.panelIdx % panels.length, 'chalk') + '</div>' +
+      '<div data-panel-dots style="flex-shrink: 0; display: flex;">' + dotsHtml(panels.length, mod(app.panelIdx, panels.length), 'chalk') + '</div>' +
     '</div>' +
   '</div>';
 }
@@ -528,7 +529,7 @@ function setText(sel, text) {
 function applyPhoto() {
   const d = app.data;
   if (!d || !(d.photos || []).length) return;
-  const p = d.photos[app.photoIdx % d.photos.length];
+  const p = d.photos[mod(app.photoIdx, d.photos.length)];
   const img = board.querySelector('[data-photo-img]');
   if (img) {
     img.src = p.src;
@@ -538,7 +539,7 @@ function applyPhoto() {
   }
   setText('[data-photo-caption]', p.caption || '');
   const dots = board.querySelector('[data-photo-dots]');
-  if (dots) dots.innerHTML = dotsHtml(d.photos.length, app.photoIdx % d.photos.length, 'light');
+  if (dots) dots.innerHTML = dotsHtml(d.photos.length, mod(app.photoIdx, d.photos.length), 'light');
 }
 
 function applyMusic() {
@@ -684,6 +685,44 @@ async function refetchWk() {
   } catch (e) { /* offline: cache blijft staan */ }
 }
 
+// ---------- afstandsbediening: blader door de grote weergaven ----------
+
+function autoRotate() { return !app.data || (app.data.panelMode || 'auto') === 'auto'; }
+// na handmatig bladeren even geen automatische wissel
+function autoPaused() { return app.lastManual && Date.now() - app.lastManual < 11000; }
+
+function stepView(delta) {
+  const d = app.data;
+  if (!d) return;
+  app.lastManual = Date.now();
+  if (d.variant === 'roterend') {
+    app.panelIdx += delta;
+    const panels = panelsFor(d);
+    const main = board.querySelector('[data-main-panel]');
+    if (main) main.innerHTML = mainPanelHtml(d, panels[mod(app.panelIdx, panels.length)]);
+    const dots = board.querySelector('[data-panel-dots]');
+    if (dots) dots.innerHTML = dotsHtml(panels.length, mod(app.panelIdx, panels.length), 'chalk');
+    return;
+  }
+  // raster: blader door het middenvlak; is er maar één weergave, dan door de foto's
+  const views = midViewsFor(d, new Date());
+  if (views.length >= 2) {
+    app.middenIdx += delta;
+    const slot = board.querySelector('[data-mid-slot]');
+    if (slot) slot.innerHTML = midSlotHtml(d);
+  } else if ((d.photos || []).length > 1) {
+    app.photoIdx += delta;
+    applyPhoto();
+  }
+}
+
+// Wordt door de Android-app aangeroepen bij ◀ ▶ op de afstandsbediening
+window.deflesRemote = (dir) => stepView(dir === 'prev' ? -1 : 1);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight') { stepView(1); e.preventDefault(); }
+  else if (e.key === 'ArrowLeft') { stepView(-1); e.preventDefault(); }
+});
+
 // ---------- start ----------
 
 async function main() {
@@ -718,18 +757,18 @@ async function main() {
   }, 9000);
   setInterval(() => {
     const d = app.data;
-    if (!d || d.variant !== 'roterend') return;
+    if (!d || d.variant !== 'roterend' || !autoRotate() || autoPaused()) return;
     app.panelIdx++;
     const panels = panelsFor(d);
     const main = board.querySelector('[data-main-panel]');
-    if (main) main.innerHTML = mainPanelHtml(d, panels[app.panelIdx % panels.length]);
+    if (main) main.innerHTML = mainPanelHtml(d, panels[mod(app.panelIdx, panels.length)]);
     const dots = board.querySelector('[data-panel-dots]');
-    if (dots) dots.innerHTML = dotsHtml(panels.length, app.panelIdx % panels.length, 'chalk');
+    if (dots) dots.innerHTML = dotsHtml(panels.length, mod(app.panelIdx, panels.length), 'chalk');
   }, 12000);
   // Middenvlak (raster): wisselt elke 14 s tussen foto's en het WK-schema
   setInterval(() => {
     const d = app.data;
-    if (!d || d.variant === 'roterend') return;
+    if (!d || d.variant === 'roterend' || !autoRotate() || autoPaused()) return;
     const views = midViewsFor(d, new Date());
     if (views.length < 2) return;
     app.middenIdx++;

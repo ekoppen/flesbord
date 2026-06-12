@@ -4,6 +4,7 @@
 
 export const DEFAULT_STATE = {
   variant: 'raster', // 'raster' | 'roterend'
+  panelMode: 'auto', // 'auto' (vanzelf wisselen) | 'handmatig' (alleen met de afstandsbediening)
   welkom: 'welkom in',
   mededeling: 'Zondag 14 juni · Nederland – Japan · 22:00 op groot scherm',
   showMusic: true,
