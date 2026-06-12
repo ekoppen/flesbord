@@ -615,7 +615,8 @@ async function searchRadioChannels() {
   if (!base) { setStatus('radio', 'Vul eerst het RetroHead-adres in.'); return; }
   setStatus('radio', 'Zenders zoeken…');
   try {
-    const res = await fetch('/api/radio/channels?base=' + encodeURIComponent(base));
+    await client.flush(); // adres eerst server-side opslaan; de server leest het daar
+    const res = await fetch('/api/radio/channels');
     const j = await res.json();
     if (!res.ok || j.error) throw new Error(j.error || 'http ' + res.status);
     app.radioChannels = (j.channels || []).filter((c) => c.enabled !== false);

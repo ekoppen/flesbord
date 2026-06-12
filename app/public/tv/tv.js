@@ -777,8 +777,8 @@ async function refetchRadio() {
   const d = app.data;
   if (!d || !radioOn(d)) { app.radioData = null; return; }
   try {
-    const url = '/api/radio?base=' + encodeURIComponent(d.radio.base) + '&slug=' + encodeURIComponent(d.radio.slug) + '&count=4';
-    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    // base/slug staan server-side in de state (SSRF-preventie); niet meesturen
+    const res = await fetch('/api/radio?count=4', { signal: AbortSignal.timeout(6000) });
     if (!res.ok) throw new Error('radio http ' + res.status);
     const j = await res.json();
     if (j.error) throw new Error(j.error);

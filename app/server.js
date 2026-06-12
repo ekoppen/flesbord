@@ -224,8 +224,11 @@ const server = http.createServer(async (req, res) => {
     // RetroHead-proxy (eigen nostalgie-TV-app). Omzeilt CORS en bundelt de
     // zender-info, het lopende blok, wat er nu speelt en de programmering.
     if (p === '/api/radio/channels' && req.method === 'GET') {
-        const base = normalizeBase(url.searchParams.get('base'));
-        if (!base) return sendJson(res, 400, { error: 'ongeldig adres' });
+        // SSRF-preventie: gebruik het in de admin-state opgeslagen adres, niet
+        // een door de client aangeleverde parameter. Het doel instellen vereist
+        // zo dezelfde toegang als de rest van het beheer.
+        const base = normalizeBase(state.radio && state.radio.base);
+        if (!base) return sendJson(res, 400, { error: 'geen RetroHead-adres ingesteld' });
         try {
           const list = await getJson(base + '/api/channels');
           const channels = (Array.isArray(list) ? list : []).map((c) => ({ slug: c.slug, name: c.name, number: c.number, enabled: c.enabled }));
@@ -236,8 +239,10 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p === '/api/radio' && req.method === 'GET') {
-      const base = normalizeBase(url.searchParams.get('base'));
-      const slug = (url.searchParams.get('slug') || '').trim();
+      // SSRF-preventie: adres + zender komen uit de admin-state, niet uit de
+      // client-request. Zo kan niemand de server willekeurige URLs laten ophalen.
+      const base = normalizeBase(state.radio && state.radio.base);
+      const slug = (state.radio && state.radio.slug || '').trim();
       const count = Math.max(1, Math.min(8, Number(url.searchParams.get('count')) || 4));
       if (!base || !slug || !/^[a-z0-9-]+$/i.test(slug)) return sendJson(res, 400, { error: 'ongeldige zender' });
       const c = base + '/api/channels/' + encodeURIComponent(slug);
