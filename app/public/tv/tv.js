@@ -105,6 +105,7 @@ function deriveTaps(d) {
       priceStr: '€ ' + (t.price || '–'),
       levelPct: Math.max(0, Math.min(100, Number(t.level) || 0)) + '%',
       logoSrc: src,
+      logoCover: !!t.logo, // eigen logo is al rond bijgesneden: laat het viltje vullen
       logoKey: (t.name || '').trim().toLowerCase(),
       initials: (t.name || '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase()
     };
@@ -142,8 +143,11 @@ function midViewsFor(d, now) {
 }
 
 function logoCoasterHtml(t, size, initialsSize) {
+  const imgStyle = t.logoCover
+    ? 'width: 100%; height: 100%; object-fit: cover;'
+    : 'width: 80%; height: 80%; object-fit: contain;';
   const inner = t.logoSrc
-    ? '<img src="' + esc(t.logoSrc) + '" alt="" style="width: 80%; height: 80%; object-fit: contain;">'
+    ? '<img src="' + esc(t.logoSrc) + '" alt="" style="' + imgStyle + '">'
     : '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: ' + initialsSize + 'px; line-height: 1; color: #2c3e35;">' + esc(t.initials) + '</div>';
   return '<div data-logo-for="' + esc(t.logoKey) + '" style="width: ' + size + 'px; height: ' + size + 'px; flex-shrink: 0; border-radius: 50%; background: #faf6ec; box-shadow: 0 ' + (size > 70 ? '6px 16px rgba(0,0,0,0.4)' : '5px 12px rgba(0,0,0,0.35)') + '; transform: rotate(-2deg); display: flex; align-items: center; justify-content: center; overflow: hidden;">' + inner + '</div>';
 }

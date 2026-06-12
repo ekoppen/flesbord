@@ -172,7 +172,7 @@ function cardTap(d) {
     const dim = on ? '1' : '0.45';
     const initials = (t.name || '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '·';
     const logoInner = t.logo
-      ? '<img src="' + esc(t.logo) + '" alt="" style="width: 80%; height: 80%; object-fit: contain;">'
+      ? '<img src="' + esc(t.logo) + '" alt="" style="width: 100%; height: 100%; object-fit: cover;">'
       : '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 19px; line-height: 1; color: #2c3e35;">' + esc(initials) + '</div>';
     const logoRemove = t.logo
       ? '<button data-act="rmLogo" data-arg="' + i + '" aria-label="Eigen logo verwijderen" title="Eigen logo verwijderen" style="position: absolute; top: -5px; right: -5px; cursor: pointer; width: 17px; height: 17px; border-radius: 999px; border: none; background: rgba(28,24,18,0.85); color: #f2ecdc; font-size: 9px; line-height: 1; padding: 0;">✕</button>'
@@ -428,28 +428,109 @@ async function addFiles(fileList) {
   setStatus('photo', newPhotos.length ? '' : 'Uploaden mislukt — probeer het opnieuw.');
 }
 
-// Eigen bierlogo: verkleind (max 240px) als PNG bij het bier opslaan
+// Eigen bierlogo: avatar-editor — slepen en zoomen binnen een rond masker,
+// daarna vierkant bijgesneden (240px) bij het bier opslaan.
 let logoTapIdx = null;
-async function addLogoFile(fileList) {
-  const f = (fileList && fileList[0]) || null;
-  const i = logoTapIdx;
-  if (!f || i == null) return;
-  try {
-    const url = URL.createObjectURL(f);
-    const img = await new Promise((res, rej) => {
-      const im = new Image();
-      im.onload = () => res(im); im.onerror = rej; im.src = url;
+
+function openLogoEditor(i, file) {
+  const M = 280, OUT = 240;            // maskergrootte op scherm / uitvoer in px
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onerror = () => URL.revokeObjectURL(url);
+  img.onload = () => {
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    if (!iw || !ih) { URL.revokeObjectURL(url); return; }
+    const minS = Math.max(M / iw, M / ih); // kleinste schaal die het masker vult
+    let s = minS;
+    let x = (M - iw * s) / 2, y = (M - ih * s) / 2;
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position: fixed; inset: 0; z-index: 50; background: rgba(15,24,20,0.72); display: flex; align-items: center; justify-content: center; padding: 20px;';
+    overlay.innerHTML =
+      '<div style="background: #2c3e35; border: 2px solid rgba(242,236,220,0.35); border-radius: 14px; padding: 24px 28px; width: 340px; max-width: 100%; box-shadow: 0 18px 60px rgba(0,0,0,0.5); box-sizing: border-box;">' +
+        '<div class="card-h" style="margin-bottom: 2px;">LOGO BIJSNIJDEN</div>' +
+        '<div style="font-size: 14px; color: rgba(242,236,220,0.55); margin-bottom: 16px;">sleep om te verschuiven · schuif of scroll om te zoomen</div>' +
+        '<div data-le-mask style="position: relative; width: ' + M + 'px; height: ' + M + 'px; margin: 0 auto; border-radius: 999px; overflow: hidden; background: #faf6ec; border: 2px solid rgba(242,236,220,0.35); cursor: grab; touch-action: none;">' +
+          '<img data-le-img alt="" draggable="false" style="position: absolute; left: 0; top: 0; max-width: none; user-select: none; pointer-events: none;">' +
+        '</div>' +
+        '<input data-le-zoom type="range" min="0" max="100" value="0" style="display: block; width: ' + M + 'px; margin: 18px auto 0; accent-color: #f4a259;">' +
+        '<div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px;">' +
+          '<button data-le-cancel class="btn-ghost">Annuleren</button>' +
+          '<button data-le-save class="btn-orange" style="border-radius: 999px;">GEBRUIK LOGO</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    const maskEl = overlay.querySelector('[data-le-mask]');
+    const imEl = overlay.querySelector('[data-le-img]');
+    const zoomEl = overlay.querySelector('[data-le-zoom]');
+    imEl.src = url;
+
+    function apply() {
+      const dw = iw * s, dh = ih * s;
+      x = Math.min(0, Math.max(M - dw, x));   // masker blijft altijd gevuld
+      y = Math.min(0, Math.max(M - dh, y));
+      imEl.style.width = dw + 'px';
+      imEl.style.left = x + 'px';
+      imEl.style.top = y + 'px';
+    }
+    function setZoom(frac, cx, cy) {           // (cx,cy) = ankerpunt in het masker
+      const ns = minS * (1 + 3 * frac);        // 1× t/m 4×
+      const px = (cx - x) / s, py = (cy - y) / s;
+      s = ns;
+      x = cx - px * s;
+      y = cy - py * s;
+      apply();
+    }
+    zoomEl.addEventListener('input', () => setZoom(zoomEl.value / 100, M / 2, M / 2));
+    maskEl.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const v = Math.max(0, Math.min(100, Number(zoomEl.value) - Math.sign(e.deltaY) * 6));
+      zoomEl.value = v;
+      const r = maskEl.getBoundingClientRect();
+      setZoom(v / 100, e.clientX - r.left, e.clientY - r.top);
+    }, { passive: false });
+    let drag = null;
+    maskEl.addEventListener('pointerdown', (e) => {
+      drag = { px: e.clientX, py: e.clientY };
+      maskEl.setPointerCapture(e.pointerId);
+      maskEl.style.cursor = 'grabbing';
     });
-    const maxSide = 240;
-    const ratio = Math.min(1, maxSide / Math.max(img.width, img.height));
-    const cw = Math.round(img.width * ratio), ch = Math.round(img.height * ratio);
-    const cv = document.createElement('canvas');
-    cv.width = cw; cv.height = ch;
-    cv.getContext('2d').drawImage(img, 0, 0, cw, ch);
-    URL.revokeObjectURL(url);
-    const src = cv.toDataURL('image/png');
-    mut((d) => { if (d.taps[i]) d.taps[i].logo = src; }, true);
-  } catch (e) { /* onleesbaar bestand: niets doen */ }
+    maskEl.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      x += e.clientX - drag.px;
+      y += e.clientY - drag.py;
+      drag = { px: e.clientX, py: e.clientY };
+      apply();
+    });
+    const endDrag = () => { drag = null; maskEl.style.cursor = 'grab'; };
+    maskEl.addEventListener('pointerup', endDrag);
+    maskEl.addEventListener('pointercancel', endDrag);
+
+    function close() { URL.revokeObjectURL(url); overlay.remove(); document.removeEventListener('keydown', onKey); }
+    function onKey(e) { if (e.key === 'Escape') close(); }
+    document.addEventListener('keydown', onKey);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    overlay.querySelector('[data-le-cancel]').addEventListener('click', close);
+    overlay.querySelector('[data-le-save]').addEventListener('click', () => {
+      const cv = document.createElement('canvas');
+      cv.width = OUT; cv.height = OUT;
+      const ctx = cv.getContext('2d');
+      const isPng = /png/i.test(file.type);
+      if (!isPng) { ctx.fillStyle = '#faf6ec'; ctx.fillRect(0, 0, OUT, OUT); }
+      ctx.drawImage(img, -x / s, -y / s, M / s, M / s, 0, 0, OUT, OUT);
+      const src = isPng ? cv.toDataURL('image/png') : cv.toDataURL('image/jpeg', 0.85);
+      mut((d) => { if (d.taps[i]) d.taps[i].logo = src; }, true);
+      close();
+    });
+    apply();
+  };
+  img.src = url;
+}
+
+function addLogoFile(fileList) {
+  const f = (fileList && fileList[0]) || null;
+  if (!f || logoTapIdx == null) return;
+  openLogoEditor(logoTapIdx, f);
 }
 
 // ---------- events (delegatie) ----------
