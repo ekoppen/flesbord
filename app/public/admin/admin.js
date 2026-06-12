@@ -397,7 +397,7 @@ function cardEvents(d) {
           const tag = r.status === 'nee' ? 'komt niet' : (r.status === 'misschien' ? 'misschien' : 'komt');
           const col = r.status === 'nee' ? 'rgba(242,236,220,0.45)' : (r.status === 'misschien' ? '#f4a259' : '#8fd6a0');
           return '<div style="display: flex; align-items: baseline; gap: 10px; padding: 5px 2px; border-bottom: 1px dashed rgba(242,236,220,0.15);">' +
-            '<div style="flex: 1; min-width: 0; color: #f2ecdc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(r.name) + (Number(r.count) > 1 ? ' <span style="color: rgba(242,236,220,0.55);">+' + (r.count - 1) + '</span>' : '') + (r.note ? ' <span style="font-family: \'Shadows Into Light Two\', cursive; color: rgba(242,236,220,0.6);">“' + esc(r.note) + '”</span>' : '') + '</div>' +
+            '<div style="flex: 1; min-width: 0; color: #f2ecdc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(r.name) + (Number(r.count) > 1 ? ' <span style="color: rgba(242,236,220,0.55);">+' + (r.count - 1) + '</span>' : '') + (r.email ? ' <span style="color: rgba(242,236,220,0.45);">· ' + esc(r.email) + '</span>' : '') + (r.note ? ' <span style="font-family: \'Shadows Into Light Two\', cursive; color: rgba(242,236,220,0.6);">“' + esc(r.note) + '”</span>' : '') + '</div>' +
             '<div style="font-size: 13px; color: ' + col + '; flex-shrink: 0;">' + tag + '</div>' +
           '</div>';
         }).join('')

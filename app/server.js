@@ -169,6 +169,18 @@ function notifyRsvp(ev, r) {
   sendMail(cfg, { to, subject: 'Aanmelding: ' + ev.title + ' — ' + r.name, text }).catch(() => {});
 }
 
+// Bevestiging naar de aanmelder zelf (alleen als die een e-mailadres opgaf).
+function confirmRsvp(ev, r) {
+  const cfg = loadMail();
+  if (!cfg.host || !cfg.from || !r.email) return;
+  const when = ev.whenISO ? new Date(ev.whenISO).toLocaleString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '';
+  const line = r.status === 'nee' ? 'Je hebt je afgemeld — jammer, tot een volgende keer!'
+    : (r.status === 'misschien' ? 'We hebben genoteerd dat je misschien komt.' : 'Je bent aangemeld — tot dan!');
+  const text = 'Hoi ' + r.name + ',\n\n' + line + '\n\n' + ev.title + (when ? '\n' + when : '') +
+    (Number(r.count) > 1 ? '\nMet ' + r.count + ' personen.' : '') + '\n\nTot bij de tap! — De Fles';
+  sendMail(cfg, { to: r.email, subject: 'Bevestiging: ' + ev.title, text }).catch(() => {});
+}
+
 // ---- Minimale, dependency-vrije SMTP-verzender (STARTTLS of implicit TLS) ----
 // Voert een lijst stappen uit. Elke stap: { send?, expect?, starttls? }.
 // hasGreeting=true: wacht eerst op de 220-begroeting (stap 0 zonder 'send').
@@ -447,15 +459,18 @@ const server = http.createServer(async (req, res) => {
         const status = ['ja', 'misschien', 'nee'].includes(b.status) ? b.status : 'ja';
         const count = Math.max(1, Math.min(20, Number(b.count) || 1));
         const note = String(b.note || '').trim().slice(0, 300);
+        const email = String(b.email || '').trim().slice(0, 120);
+        const emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
         if (!name) return sendJson(res, 400, { error: 'Vul je naam in.' });
         if (!Array.isArray(ev.rsvps)) ev.rsvps = [];
         if (ev.rsvps.length >= 1000) return sendJson(res, 403, { error: 'vol' });
-        const entry = { id: uid(), name, status, count, note, at: Date.now() };
+        const entry = { id: uid(), name, status, count, note, email: emailOk ? email : '', at: Date.now() };
         ev.rsvps.push(entry);
         schedulePersist();
         broadcast('');
-        notifyRsvp(ev, entry); // mailmelding naar de bar (best effort)
-        return sendJson(res, 200, { ok: true });
+        notifyRsvp(ev, entry);                 // mailmelding naar de bar (best effort)
+        if (emailOk) confirmRsvp(ev, entry);   // bevestiging naar de aanmelder
+        return sendJson(res, 200, { ok: true, confirmed: emailOk });
       }
     }
 

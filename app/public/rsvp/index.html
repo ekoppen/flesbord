@@ -95,6 +95,8 @@ function render() {
           '<div class="qty" id="qty">1</div>' +
           '<button class="stepbtn" id="plus">+</button>' +
         '</div>' +
+        '<div class="lbl">JE E-MAIL (optioneel — voor een bevestiging)</div>' +
+        '<input class="in" id="email" type="email" maxlength="120" placeholder="naam@voorbeeld.nl">' +
         '<div class="lbl">OPMERKING (optioneel)</div>' +
         '<textarea class="in" id="note" rows="2" maxlength="300" placeholder="bv. neem wat te knabbelen mee"></textarea>' +
         '<button class="send" id="send">AANMELDEN</button>' +
@@ -114,6 +116,7 @@ function render() {
 async function submit() {
   const name = document.getElementById('name').value.trim();
   const note = document.getElementById('note').value.trim();
+  const email = document.getElementById('email').value.trim();
   const msg = document.getElementById('msg');
   const btn = document.getElementById('send');
   if (!name) { msg.textContent = 'Vul even je naam in.'; return; }
@@ -121,12 +124,13 @@ async function submit() {
   try {
     const res = await fetch('/api/rsvp/' + encodeURIComponent(id) + '?t=' + encodeURIComponent(t), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, status, count, note })
+      body: JSON.stringify({ name, status, count, note, email })
     });
     const j = await res.json();
     if (!res.ok) throw new Error(j.error || 'fout');
     const line = status === 'nee' ? 'Jammer dat je er niet bij bent!' : (status === 'misschien' ? 'Tot misschien!' : 'Tot dan!');
-    body.innerHTML = '<div class="ok"><div class="big">Bedankt!</div><div class="desc">' + esc(line) + '</div></div>';
+    const extra = j.confirmed ? '<div class="desc" style="margin-top:8px;">Je krijgt een bevestiging per e-mail.</div>' : '';
+    body.innerHTML = '<div class="ok"><div class="big">Bedankt!</div><div class="desc">' + esc(line) + '</div>' + extra + '</div>';
   } catch (e) {
     btn.disabled = false;
     msg.textContent = e.message || 'Er ging iets mis — probeer het zo nog eens.';
