@@ -158,12 +158,15 @@ function deriveNextEvent(d, now) {
 function eventPillHtml(d) {
   const ev = deriveNextEvent(d, new Date());
   if (!ev) return '';
-  return '<div style="border: 2px solid rgba(242,236,220,0.3); border-radius: 12px; padding: 8px 16px; display: flex; align-items: center; gap: 12px; max-width: 360px;">' +
-    '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 18px; color: #f4a259; line-height: 1; transform: rotate(-1.5deg); flex-shrink: 0;">wie komen er?</div>' +
-    '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 40px; line-height: 1; color: #f2ecdc; flex-shrink: 0;">' + esc(ev.coming) + '</div>' +
+  return '<div style="border: 2px solid rgba(242,236,220,0.3); border-radius: 12px; padding: 6px 18px; display: flex; align-items: center; gap: 16px; max-width: 400px;">' +
+    '<div style="text-align: center; flex-shrink: 0;">' +
+      '<div style="font-size: 11px; letter-spacing: 0.2em; color: rgba(242,236,220,0.6); line-height: 1.1;">AANMELDINGEN</div>' +
+      '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 56px; line-height: 0.85; color: #f4a259; text-shadow: 0 0 14px rgba(244,162,89,0.25);">' + esc(ev.coming) + '</div>' +
+    '</div>' +
+    '<div style="width: 2px; align-self: stretch; border-left: 2px dashed rgba(242,236,220,0.25);"></div>' +
     '<div style="min-width: 0;">' +
-      '<div style="font-size: 14px; color: rgba(242,236,220,0.85); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(ev.title) + '</div>' +
-      '<div style="font-size: 12px; color: rgba(242,236,220,0.5);">' + esc(ev.whenShort) + '</div>' +
+      '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 26px; line-height: 1; color: #f2ecdc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(ev.title) + '</div>' +
+      '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 18px; color: rgba(242,236,220,0.6); margin-top: 2px;">' + esc(ev.whenShort) + '</div>' +
     '</div>' +
   '</div>';
 }

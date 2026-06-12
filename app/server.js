@@ -153,7 +153,20 @@ function hostFromBase(b) {
 let publicHostCache = hostFromBase((loadMail().publicBase) || '');
 // Veilige versie voor de admin-UI: wachtwoord wordt nooit teruggestuurd.
 function mailPublicView(cfg) {
-  return { host: cfg.host || '', port: cfg.port || 587, secure: !!cfg.secure, user: cfg.user || '', from: cfg.from || '', publicBase: cfg.publicBase || '', hasPass: !!cfg.pass };
+  return { host: cfg.host || '', port: cfg.port || 587, secure: !!cfg.secure, user: cfg.user || '', from: cfg.from || '', publicBase: cfg.publicBase || '', notify: cfg.notify || '', hasPass: !!cfg.pass };
+}
+
+// Stuur (best effort) een melding naar de bar bij een nieuwe aanmelding.
+function notifyRsvp(ev, r) {
+  const cfg = loadMail();
+  if (!cfg.host || !cfg.from) return; // mail niet ingesteld → stil overslaan
+  const to = (cfg.notify || '').trim() || (cfg.from.match(/<(.+)>/) || [null, cfg.from])[1];
+  if (!to) return;
+  const statusTxt = r.status === 'nee' ? 'komt NIET' : (r.status === 'misschien' ? 'komt MISSCHIEN' : 'komt');
+  const text = 'Nieuwe aanmelding voor "' + ev.title + '":\n\n' +
+    r.name + ' — ' + statusTxt + (Number(r.count) > 1 ? ' (met ' + r.count + ' personen)' : '') +
+    (r.note ? '\nOpmerking: ' + r.note : '') + '\n\n— De Fles';
+  sendMail(cfg, { to, subject: 'Aanmelding: ' + ev.title + ' — ' + r.name, text }).catch(() => {});
 }
 
 // ---- Minimale, dependency-vrije SMTP-verzender (STARTTLS of implicit TLS) ----
@@ -437,9 +450,11 @@ const server = http.createServer(async (req, res) => {
         if (!name) return sendJson(res, 400, { error: 'Vul je naam in.' });
         if (!Array.isArray(ev.rsvps)) ev.rsvps = [];
         if (ev.rsvps.length >= 1000) return sendJson(res, 403, { error: 'vol' });
-        ev.rsvps.push({ id: uid(), name, status, count, note, at: Date.now() });
+        const entry = { id: uid(), name, status, count, note, at: Date.now() };
+        ev.rsvps.push(entry);
         schedulePersist();
         broadcast('');
+        notifyRsvp(ev, entry); // mailmelding naar de bar (best effort)
         return sendJson(res, 200, { ok: true });
       }
     }
@@ -453,6 +468,7 @@ const server = http.createServer(async (req, res) => {
       const next = {
         host: (b.host || '').trim(), port: Number(b.port) || 587, secure: !!b.secure,
         user: (b.user || '').trim(), from: (b.from || '').trim(),
+        notify: (b.notify || '').trim(),
         publicBase: (b.publicBase || '').trim().replace(/\/+$/, ''),
         // leeg wachtwoord = ongewijzigd laten (UI stuurt het nooit terug)
         pass: (b.pass != null && b.pass !== '') ? b.pass : (cur.pass || '')
