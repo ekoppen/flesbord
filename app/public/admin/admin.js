@@ -7,7 +7,7 @@ import { createStateClient } from '../defles-sync.js';
 const client = createStateClient();
 const cards = document.getElementById('cards');
 
-const app = { weatherQuery: '', weatherStatus: '', volumioStatus: '', spotifyStatus: '', photoStatus: '', wkStatus: '' };
+const app = { weatherQuery: '', weatherStatus: '', volumioStatus: '', spotifyStatus: '', photoStatus: '', wkStatus: '', radioStatus: '', radioChannels: [] };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -329,6 +329,56 @@ function cardThema(d) {
   '</div>';
 }
 
+function cardRadio(d) {
+  const r = d.radio || {};
+  const init = (r.name || 'RH').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '·';
+  const logoInner = r.logo
+    ? '<img src="' + esc(r.logo) + '" alt="" style="width: 100%; height: 100%; object-fit: cover;">'
+    : '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 19px; line-height: 1; color: #2c3e35;">' + esc(init) + '</div>';
+  const logoRemove = r.logo
+    ? '<button data-act="rmRadioLogo" aria-label="Logo verwijderen" title="Logo verwijderen" style="position: absolute; top: -5px; right: -5px; cursor: pointer; width: 17px; height: 17px; border-radius: 999px; border: none; background: rgba(28,24,18,0.85); color: #f2ecdc; font-size: 9px; line-height: 1; padding: 0;">✕</button>'
+    : '';
+  // Zenderkeuze: opties uit de laatst opgehaalde lijst (+ huidige slug)
+  const opts = app.radioChannels.slice();
+  if (r.slug && !opts.some((c) => c.slug === r.slug)) opts.unshift({ slug: r.slug, name: r.slug });
+  const channelSelect = opts.length
+    ? '<select id="radio-channel" class="in" style="width: 100%;">' +
+        '<option value="">— kies een zender —</option>' +
+        opts.map((c) => '<option value="' + esc(c.slug) + '"' + (r.slug === c.slug ? ' selected' : '') + '>' + esc(c.name || c.slug) + '</option>').join('') +
+      '</select>'
+    : '<div style="font-size: 14px; color: rgba(242,236,220,0.5); padding: 9px 0;">Vul het adres in en klik op ZOEK ZENDERS.</div>';
+  return '<div class="card">' +
+    '<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">' +
+      '<div class="card-h">RADIO — RETROHEAD</div>' +
+      toggleHtml('toggleRadio', r.enabled, 'Radio tonen') +
+    '</div>' +
+    '<div style="font-size: 14px; color: rgba(242,236,220,0.55); margin-bottom: 14px; line-height: 1.5;">Toont de programmering van je eigen RetroHead-zender als extra weergave in het midden van de TV.</div>' +
+    '<div class="row2" style="gap: 12px; align-items: end;">' +
+      '<div><div class="lbl">RETROHEAD-ADRES</div>' +
+        '<div style="display: flex; gap: 10px;">' +
+          '<input class="in" data-bind="radio.base" value="' + esc(r.base) + '" placeholder="bv. http://192.168.1.x:8080" style="flex: 1;">' +
+          '<button class="btn-orange" data-act="radioChannels">ZOEK ZENDERS</button>' +
+        '</div>' +
+      '</div>' +
+      '<div><div class="lbl">ZENDER</div>' + channelSelect + '</div>' +
+    '</div>' +
+    '<div class="status" data-status="radio"' + (app.radioStatus ? '' : ' style="display:none;"') + '>' + esc(app.radioStatus) + '</div>' +
+    '<div class="row2" style="gap: 12px; margin-top: 16px; align-items: end;">' +
+      '<div><div class="lbl">WEERGAVENAAM (leeg = naam van de zender)</div>' +
+        '<input class="in" data-bind="radio.name" value="' + esc(r.name) + '" placeholder="RetroHead" style="width: 100%;"></div>' +
+      '<div><div class="lbl">ONDERTITEL</div>' +
+        '<input class="in" data-bind="radio.sub" value="' + esc(r.sub) + '" placeholder="nu op de buis" style="width: 100%;"></div>' +
+    '</div>' +
+    '<div style="display: flex; align-items: center; gap: 14px; margin-top: 16px;">' +
+      '<div style="position: relative; width: 48px; height: 48px;">' +
+        '<button data-act="pickRadioLogo" title="Eigen logo uploaden" style="cursor: pointer; width: 48px; height: 48px; border-radius: 12px; border: 2px solid rgba(242,236,220,0.3); background: #faf6ec; padding: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; box-sizing: border-box;">' + logoInner + '</button>' +
+        logoRemove +
+      '</div>' +
+      '<div style="font-size: 14px; color: rgba(242,236,220,0.5); line-height: 1.5;">Eigen logo (optioneel) — leeg = het logo van de zender zelf. De TV ververst de programmering elke 30 seconden.</div>' +
+    '</div>' +
+  '</div>';
+}
+
 function render() {
   const d = client.get();
   if (!d) return;
@@ -336,7 +386,7 @@ function render() {
     '<div style="display: flex; flex-direction: column; gap: 20px;">' +
       '<div class="row2">' + cardScherm(d) + cardWeer(d) + '</div>' +
       '<div class="row2">' + cardTeksten(d) + cardMuziek(d) + '</div>' +
-      cardTap(d) + cardVoorraad(d) + cardFotos(d) + cardThema(d) +
+      cardTap(d) + cardVoorraad(d) + cardFotos(d) + cardThema(d) + cardRadio(d) +
       '<div style="display: flex; justify-content: flex-end; padding: 4px;">' +
         '<button class="btn-ghost" data-act="reset">Terug naar voorbeelddata</button>' +
       '</div>' +
@@ -560,6 +610,22 @@ function addLogoFile(fileList) {
 
 // Embleem/watermerk (bv. de KNVB-leeuw): transparante PNG, verkleind opgeslagen
 // (geen bijsnijden — de transparantie bepaalt de vorm; TV kleurt het oranje).
+async function searchRadioChannels() {
+  const base = (client.get().radio.base || '').trim();
+  if (!base) { setStatus('radio', 'Vul eerst het RetroHead-adres in.'); return; }
+  setStatus('radio', 'Zenders zoeken…');
+  try {
+    const res = await fetch('/api/radio/channels?base=' + encodeURIComponent(base));
+    const j = await res.json();
+    if (!res.ok || j.error) throw new Error(j.error || 'http ' + res.status);
+    app.radioChannels = (j.channels || []).filter((c) => c.enabled !== false);
+    setStatus('radio', app.radioChannels.length ? app.radioChannels.length + ' zender(s) gevonden ✓' : 'Verbonden, maar geen zenders gevonden.');
+    render();
+  } catch (e) {
+    setStatus('radio', 'Geen verbinding met RetroHead — controleer het adres en of de server het kan bereiken.');
+  }
+}
+
 async function addEmblemFile(fileList) {
   const f = (fileList && fileList[0]) || null;
   if (!f) return;
@@ -611,6 +677,14 @@ document.addEventListener('change', (e) => {
   }
 });
 
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'radio-channel') {
+    const slug = e.target.value;
+    const ch = app.radioChannels.find((c) => c.slug === slug);
+    mut((d) => { d.radio.slug = slug; if (ch && !(d.radio.name || '').trim()) d.radio.name = ch.name || ''; }, true);
+  }
+});
+
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && e.target.dataset && e.target.dataset.local === 'weatherQuery') searchWeather();
 });
@@ -636,6 +710,10 @@ document.addEventListener('click', (e) => {
     case 'rmStockLogo': mut((d) => { delete d.stock[i].img; }, true); break;
     case 'pickEmblem': { const f = document.getElementById('emblem-input'); if (f) f.click(); break; }
     case 'rmEmblem': mut((d) => { d.theme.emblem = null; }, true); break;
+    case 'toggleRadio': mut((d) => { d.radio.enabled = !d.radio.enabled; }, true); break;
+    case 'radioChannels': searchRadioChannels(); break;
+    case 'pickRadioLogo': { pendingCrop = (src) => mut((d) => { d.radio.logo = src; }, true); const f = document.getElementById('logo-input'); if (f) f.click(); break; }
+    case 'rmRadioLogo': mut((d) => { d.radio.logo = null; }, true); break;
     case 'addStock': mut((d) => { d.stock.push({ id: D.uid(), name: '', cat: 'Bier', qty: 6 }); }, true); break;
     case 'rmStock': mut((d) => { d.stock.splice(i, 1); }, true); break;
     case 'qtyMinus': {

@@ -51,6 +51,14 @@ export const DEFAULT_STATE = {
       { team: 'Zweden', g: 0, pts: 0 },
       { team: 'Tunesië', g: 0, pts: 0 }
     ]
+  },
+  radio: {
+    enabled: false,
+    base: '',              // RetroHead-adres, bv. http://192.168.1.x:8080
+    slug: '',              // gekozen zender (channel-slug)
+    name: '',              // weergavenaam (leeg = naam van de zender zelf)
+    sub: 'nu op de buis',
+    logo: null             // eigen logo (leeg = logo van de zender zelf)
   }
 };
 

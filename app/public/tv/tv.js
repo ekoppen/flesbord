@@ -11,7 +11,7 @@ const frame = document.getElementById('frame');
 const app = {
   data: null, weather: null, liveMusic: null,
   photoIdx: 0, panelIdx: 0, middenIdx: 0,
-  logos: {}, wkAll: null,
+  logos: {}, wkAll: null, radioData: null, radioKey: '',
   lastPlace: '', nextKey: ''
 };
 
@@ -140,10 +140,13 @@ function deriveWkAll(d, now) {
   return { next, countdown, rows };
 }
 
+function radioOn(d) { return !!(d.radio && d.radio.enabled && d.radio.slug); }
+
 function midViewsFor(d, now) {
   const views = [];
   if ((d.photos || []).length > 0) views.push('photos');
   if (d.theme && d.theme.enabled && deriveWkAll(d, now).next) views.push('wk');
+  if (radioOn(d)) views.push('radio');
   return views;
 }
 
@@ -189,7 +192,66 @@ function panelsFor(d) {
   panels.push('tap');
   if (d.theme && d.theme.enabled) panels.push('theme');
   if ((d.stock || []).length > 0) panels.push('stock');
+  if (radioOn(d)) panels.push('radio');
   return panels;
+}
+
+// RetroHead — "papier op het bord"-poster met de zenderprogrammering
+function radioPosterHtml(d) {
+  const r = d.radio || {};
+  const data = app.radioData;
+  const name = (r.name || (data && data.name) || 'RetroHead').toUpperCase();
+  const logo = r.logo || (data && data.logo) || '';
+  const logoHtml = logo
+    ? '<div style="width: 84px; height: 84px; flex-shrink: 0; border-radius: 14px; overflow: hidden; background: #2c3e35; box-shadow: 0 6px 16px rgba(0,0,0,0.3); transform: rotate(2deg);"><img src="' + esc(logo) + '" alt="" style="width: 100%; height: 100%; object-fit: cover;"></div>'
+    : '';
+  let body;
+  if (!data) {
+    body = '<div style="flex: 1; display: flex; align-items: center; justify-content: center; font-family: \'Shadows Into Light Two\', cursive; font-size: 30px; color: rgba(74,67,55,0.6);">Programmering wordt geladen…</div>';
+  } else {
+    const accent = (data.now && data.now.color) || '#c2540a';
+    const clipLine = data.clip
+      ? '<div style="font-size: 18px; color: rgba(74,67,55,0.7); margin-top: 4px;">♪ ' + esc(data.clip.title) + (data.clip.artist ? ' — ' + esc(data.clip.artist) : '') + '</div>'
+      : '';
+    const nowBlock = data.now
+      ? '<div style="border: 3px double rgba(194,84,10,0.55); border-radius: 10px; padding: 12px 22px; margin-top: 12px; flex-shrink: 0;">' +
+          '<div style="display: flex; align-items: center; gap: 12px;">' +
+            '<div style="width: 12px; height: 12px; border-radius: 999px; background: ' + accent + ';"></div>' +
+            '<div style="font-size: 13px; letter-spacing: 0.26em; color: rgba(74,67,55,0.55);">NU OP DE BUIS</div>' +
+            (data.now.start ? '<div style="margin-left: auto; font-size: 16px; color: rgba(74,67,55,0.6);">' + esc(data.now.start) + (data.now.end ? '–' + esc(data.now.end) : '') + '</div>' : '') +
+          '</div>' +
+          '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 46px; line-height: 1.05; color: #2c3e35; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(data.now.name) + '</div>' +
+          clipLine +
+        '</div>'
+      : '';
+    const rows = data.upcoming.length
+      ? data.upcoming.map((u) => {
+          const t = (u.startAt || '').slice(11, 16);
+          const when = u.inMinutes != null ? (u.inMinutes < 60 ? 'over ' + u.inMinutes + ' min' : 'over ' + Math.floor(u.inMinutes / 60) + 'u ' + (u.inMinutes % 60) + 'm') : '';
+          return '<div style="display: flex; align-items: baseline; gap: 18px; padding: 8px 4px; border-bottom: 2px dotted rgba(74,67,55,0.25);">' +
+            '<div style="width: 64px; font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 30px; line-height: 1; color: ' + ((u.color) || '#c2540a') + '; flex-shrink: 0;">' + esc(t) + '</div>' +
+            '<div style="flex: 1; font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 33px; line-height: 1; color: #2c3e35; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(u.name) + '</div>' +
+            '<div style="font-size: 16px; color: rgba(74,67,55,0.6); flex-shrink: 0;">' + esc(when) + '</div>' +
+          '</div>';
+        }).join('')
+      : '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 24px; color: rgba(74,67,55,0.55); padding: 14px 4px;">Geen verdere programmering bekend.</div>';
+    body =
+      nowBlock +
+      '<div style="font-size: 13px; letter-spacing: 0.3em; color: rgba(74,67,55,0.5); margin: 14px 4px 2px;">STRAKS</div>' +
+      '<div style="flex: 1; min-height: 0; overflow: hidden;">' + rows + '</div>';
+  }
+  return '<div style="width: 100%; height: 100%; min-height: 0; background: #faf6ec; padding: 24px 34px 22px; box-sizing: border-box; transform: rotate(-0.6deg); box-shadow: 0 10px 30px rgba(0,0,0,0.4); display: flex; flex-direction: column; position: relative;">' +
+    '<div style="display: flex; align-items: center; gap: 18px; flex-shrink: 0;">' +
+      '<div style="min-width: 0; flex: 1;">' +
+        '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 26px; color: #c2540a; line-height: 1; transform: rotate(-1deg);">' + esc(r.sub || 'nu op de buis') + '</div>' +
+        '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 60px; line-height: 1; letter-spacing: 0.08em; color: #2c3e35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(name) + '</div>' +
+      '</div>' +
+      logoHtml +
+    '</div>' +
+    '<div style="border-top: 3px dashed rgba(74,67,55,0.3); margin: 12px 0 4px; flex-shrink: 0;"></div>' +
+    body +
+    '<div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%) rotate(2deg); width: 120px; height: 28px; background: rgba(242,236,220,0.45); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"></div>' +
+  '</div>';
 }
 
 // ---------- deel-templates ----------
@@ -333,7 +395,9 @@ function midSlotHtml(d) {
       '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 32px; color: rgba(242,236,220,0.55);">Nog geen foto’s — voeg ze toe via het beheerscherm</div></div>';
   }
   const active = views[mod(app.middenIdx, views.length)];
-  return active === 'wk' ? wkPosterHtml(d, now) : polaroidHtml(d, true);
+  if (active === 'wk') return wkPosterHtml(d, now);
+  if (active === 'radio') return radioPosterHtml(d);
+  return polaroidHtml(d, true);
 }
 
 function rasterHtml(d) {
@@ -510,6 +574,11 @@ function mainPanelHtml(d, panel) {
           '</div>' + standingRows +
         '</div>' +
       '</div>' +
+    '</div>';
+  }
+  if (panel === 'radio') {
+    return '<div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 36px; animation: defles-fade 0.7s ease;">' +
+      '<div style="width: 1000px; max-width: 100%; height: 100%;">' + radioPosterHtml(d) + '</div>' +
     '</div>';
   }
   // panel === 'stock'
@@ -703,6 +772,39 @@ async function refetchMusic() {
   applyMusic();
 }
 
+// RetroHead-programmering ophalen via de server-proxy
+async function refetchRadio() {
+  const d = app.data;
+  if (!d || !radioOn(d)) { app.radioData = null; return; }
+  try {
+    const url = '/api/radio?base=' + encodeURIComponent(d.radio.base) + '&slug=' + encodeURIComponent(d.radio.slug) + '&count=4';
+    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    if (!res.ok) throw new Error('radio http ' + res.status);
+    const j = await res.json();
+    if (j.error) throw new Error(j.error);
+    app.radioData = j;
+    updateRadioSlot();
+  } catch (e) { /* offline: laatst bekende programmering blijft staan */ }
+}
+
+// Ververst alleen het radio-paneel als dat nu in beeld is (geen volledige herrender)
+function updateRadioSlot() {
+  const d = app.data;
+  if (!d) return;
+  const now = new Date();
+  if (d.variant === 'roterend') {
+    const panels = panelsFor(d);
+    if (panels[mod(app.panelIdx, panels.length)] !== 'radio') return;
+    const main = board.querySelector('[data-main-panel]');
+    if (main) main.innerHTML = mainPanelHtml(d, 'radio');
+  } else {
+    const views = midViewsFor(d, now);
+    if (!views.length || views[mod(app.middenIdx, views.length)] !== 'radio') return;
+    const slot = board.querySelector('[data-mid-slot]');
+    if (slot) slot.innerHTML = radioPosterHtml(d);
+  }
+}
+
 // WK-schema en stand ophalen via TheSportsDB en in de gedeelde state bewaren
 async function refetchWk() {
   const d = app.data;
@@ -777,12 +879,17 @@ async function main() {
   setTimeout(refetchMusic, 300);
   setTimeout(refetchWk, 800);
   setTimeout(refetchWkAll, 1200);
+  app.radioKey = radioOn(app.data) ? app.data.radio.base + '|' + app.data.radio.slug : '';
+  refetchRadio();
 
   client.watch((d) => {
     app.data = d;
     renderBoard();
     maybeRefetchWeather();
     loadLogos();
+    // RetroHead opnieuw ophalen als adres/zender is gewijzigd (of net aangezet)
+    const key = radioOn(d) ? d.radio.base + '|' + d.radio.slug : '';
+    if (key !== app.radioKey) { app.radioKey = key; app.radioData = null; refetchRadio(); }
   });
 
   setInterval(tick, 1000);
@@ -816,6 +923,7 @@ async function main() {
   setInterval(refetchMusic, 5000);
   setInterval(refetchWk, 30 * 60 * 1000);
   setInterval(refetchWkAll, 30 * 60 * 1000);
+  setInterval(refetchRadio, 30 * 1000);
 }
 
 main();

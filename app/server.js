@@ -109,6 +109,23 @@ function sendJson(res, code, obj) {
   res.end(body);
 }
 
+// Normaliseer/valideer een host-adres (bv. RetroHead) tot http(s)://host[:poort].
+function normalizeBase(raw) {
+  let h = (raw || '').trim();
+  if (!h) return null;
+  if (!/^https?:\/\//i.test(h)) h = 'http://' + h;
+  h = h.replace(/\/+$/, '');
+  const rest = h.replace(/^https?:\/\//i, '');
+  if (!/^[a-zA-Z0-9.\-]+(:\d+)?$/.test(rest)) return null;
+  return h;
+}
+
+async function getJson(fullUrl) {
+  const r = await fetch(fullUrl, { signal: AbortSignal.timeout(4000) });
+  if (!r.ok) throw new Error('http ' + r.status);
+  return r.json();
+}
+
 async function serveFile(res, filePath) {
   try {
     const st = await fsp.stat(filePath);
@@ -202,6 +219,42 @@ const server = http.createServer(async (req, res) => {
       } catch (e) {
         return sendJson(res, 502, { error: 'geen verbinding met Volumio' });
       }
+    }
+
+    // RetroHead-proxy (eigen nostalgie-TV-app). Omzeilt CORS en bundelt de
+    // zender-info, het lopende blok, wat er nu speelt en de programmering.
+    if (p === '/api/radio/channels' && req.method === 'GET') {
+        const base = normalizeBase(url.searchParams.get('base'));
+        if (!base) return sendJson(res, 400, { error: 'ongeldig adres' });
+        try {
+          const list = await getJson(base + '/api/channels');
+          const channels = (Array.isArray(list) ? list : []).map((c) => ({ slug: c.slug, name: c.name, number: c.number, enabled: c.enabled }));
+          return sendJson(res, 200, { channels });
+        } catch (e) {
+          return sendJson(res, 502, { error: 'geen verbinding met RetroHead' });
+        }
+    }
+
+    if (p === '/api/radio' && req.method === 'GET') {
+      const base = normalizeBase(url.searchParams.get('base'));
+      const slug = (url.searchParams.get('slug') || '').trim();
+      const count = Math.max(1, Math.min(8, Number(url.searchParams.get('count')) || 4));
+      if (!base || !slug || !/^[a-z0-9-]+$/i.test(slug)) return sendJson(res, 400, { error: 'ongeldige zender' });
+      const c = base + '/api/channels/' + encodeURIComponent(slug);
+      const [ch, block, pos, sched] = await Promise.all([
+        getJson(c).catch(() => null),
+        getJson(c + '/active-block').catch(() => null),
+        getJson(c + '/playout/position').catch(() => null),
+        getJson(c + '/schedule/upcoming?count=' + count).catch(() => null)
+      ]);
+      if (!ch && !block && !sched) return sendJson(res, 502, { error: 'geen verbinding met RetroHead' });
+      const now = block ? { name: block.name, start: block.start_time, end: block.end_time, color: block.color || null } : null;
+      const clip = pos && pos.position && pos.position.title ? { title: pos.position.title, artist: pos.position.artist || '' } : null;
+      const upcoming = (sched && Array.isArray(sched.upcoming) ? sched.upcoming : []).map((u) => ({
+        name: u.name, startAt: u.start_at, inMinutes: u.in_minutes, color: u.color || null
+      }));
+      const logo = ch && ch.logo_url ? (/^https?:\/\//i.test(ch.logo_url) ? ch.logo_url : base + ch.logo_url) : null;
+      return sendJson(res, 200, { name: ch ? ch.name : '', logo, now, clip, upcoming });
     }
 
     // Statische bestanden
