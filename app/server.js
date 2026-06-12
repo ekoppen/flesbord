@@ -428,8 +428,21 @@ const server = http.createServer(async (req, res) => {
       const upcoming = (sched && Array.isArray(sched.upcoming) ? sched.upcoming : []).map((u) => ({
         name: u.name, startAt: u.start_at, inMinutes: u.in_minutes, color: u.color || null
       }));
-      const logo = ch && ch.logo_url ? (/^https?:\/\//i.test(ch.logo_url) ? ch.logo_url : base + ch.logo_url) : null;
-      return sendJson(res, 200, { name: ch ? ch.name : '', logo, now, clip, upcoming });
+      const absUrl = (u) => (!u ? null : (/^https?:\/\//i.test(u) ? u : base + u));
+      const logo = ch ? absUrl(ch.logo_url) : null;
+      // Het zenderlogo is vaak een compositie van lagen — stuur ze mee zodat de
+      // TV ze gestapeld toont (anders zie je maar één laag).
+      const logoLayers = (ch && Array.isArray(ch.logo_layers) ? ch.logo_layers : [])
+        .map((l) => ({
+          url: absUrl(l.url),
+          xPct: Number(l.x_pct) || 0,
+          yPct: Number(l.y_pct) || 0,
+          widthPct: l.width_pct != null ? Number(l.width_pct) : 100,
+          opacity: l.opacity != null ? Number(l.opacity) : 1,
+          rotation: Number(l.rotation_deg) || 0
+        }))
+        .filter((l) => l.url);
+      return sendJson(res, 200, { name: ch ? ch.name : '', logo, logoLayers, now, clip, upcoming });
     }
 
     // ===== Evenement-planner =====

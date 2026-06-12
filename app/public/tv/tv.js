@@ -231,10 +231,22 @@ function radioPosterHtml(d) {
   const r = d.radio || {};
   const data = app.radioData;
   const name = (r.name || (data && data.name) || 'RetroHead').toUpperCase();
-  const logo = r.logo || (data && data.logo) || '';
-  const logoHtml = logo
-    ? '<div style="width: 84px; height: 84px; flex-shrink: 0; border-radius: 14px; overflow: hidden; background: #2c3e35; box-shadow: 0 6px 16px rgba(0,0,0,0.3); transform: rotate(2deg);"><img src="' + esc(logo) + '" alt="" style="width: 100%; height: 100%; object-fit: cover;"></div>'
-    : '';
+  const layers = data && data.logoLayers;
+  let logoHtml = '';
+  if (r.logo) {
+    // eigen geüpload logo: enkel beeld, niet bijsnijden
+    logoHtml = '<div style="width: 88px; height: 88px; flex-shrink: 0; transform: rotate(2deg);"><img src="' + esc(r.logo) + '" alt="" style="width: 100%; height: 100%; object-fit: contain;"></div>';
+  } else if (layers && layers.length) {
+    // zenderlogo als laag-compositie (z-volgorde = array-volgorde)
+    const stack = layers.map((l, idx) =>
+      '<div style="position: absolute; left: 50%; top: 50%; width: ' + l.widthPct + '%; opacity: ' + l.opacity +
+      '; z-index: ' + idx + '; transform: translate(calc(-50% + ' + l.xPct + '%), calc(-50% + ' + l.yPct + '%)) rotate(' + l.rotation + 'deg);">' +
+        '<img src="' + esc(l.url) + '" alt="" style="width: 100%; height: auto; display: block;">' +
+      '</div>').join('');
+    logoHtml = '<div style="position: relative; width: 96px; height: 96px; flex-shrink: 0;">' + stack + '</div>';
+  } else if (data && data.logo) {
+    logoHtml = '<div style="width: 88px; height: 88px; flex-shrink: 0; transform: rotate(2deg);"><img src="' + esc(data.logo) + '" alt="" style="width: 100%; height: 100%; object-fit: contain;"></div>';
+  }
   let body;
   if (!data) {
     body = '<div style="flex: 1; display: flex; align-items: center; justify-content: center; font-family: \'Shadows Into Light Two\', cursive; font-size: 30px; color: rgba(74,67,55,0.6);">Programmering wordt geladen…</div>';
