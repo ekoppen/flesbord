@@ -97,9 +97,21 @@ function deriveStock(d) {
   });
 }
 
+function deriveSnacks(d) {
+  return (d.snacks || []).map((s) => ({ name: s.name, img: s.img || '' }));
+}
+
 function stockThumbHtml(c, size) {
   if (!c.img) return '';
   return '<div style="width: ' + size + 'px; height: ' + size + 'px; flex-shrink: 0; border-radius: 50%; background: #faf6ec; overflow: hidden; box-shadow: 0 3px 8px rgba(0,0,0,0.3);"><img src="' + esc(c.img) + '" alt="" style="width: 100%; height: 100%; object-fit: cover;"></div>';
+}
+
+// Eén "naamregel" (koelkast/hapjes) op het bord
+function itemLineHtml(c) {
+  return '<div style="display: flex; align-items: center; gap: 10px; border-bottom: 2px dotted rgba(242,236,220,0.3); padding: 5px 2px;">' +
+    stockThumbHtml(c, 30) +
+    '<div style="font-size: 22px; color: rgba(242,236,220,0.92); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(c.name) + '</div>' +
+  '</div>';
 }
 
 function deriveTaps(d) {
@@ -450,12 +462,10 @@ function rasterHtml(d) {
   const t = deriveTheme(d, now);
   const taps = deriveTaps(d);
   const stock = deriveStock(d);
+  const snacks = deriveSnacks(d);
 
-  const stockRows = stock.map((c) =>
-    '<div style="display: flex; align-items: center; gap: 10px; border-bottom: 2px dotted rgba(242,236,220,0.3); padding: 5px 2px;">' +
-      stockThumbHtml(c, 30) +
-      '<div style="font-size: 24px; color: rgba(242,236,220,0.92); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(c.name) + '</div>' +
-    '</div>').join('');
+  const stockRows = stock.map(itemLineHtml).join('');
+  const snackRows = snacks.map(itemLineHtml).join('');
 
   // Eén bier op de tap: het viltje groot in de kop van de kaart i.p.v. klein per regel
   const singleTap = taps.length === 1 ? taps[0] : null;
@@ -528,9 +538,15 @@ function rasterHtml(d) {
     '<div style="flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 470px; gap: 36px;">' +
       '<div style="display: flex; flex-direction: column; gap: 24px; min-height: 0; min-width: 0;">' +
         '<div data-mid-slot style="flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;">' + midSlotHtml(d) + '</div>' +
-        '<div style="border: 2px solid rgba(242,236,220,0.3); border-radius: 12px; padding: 20px 26px;">' +
-          '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 36px; letter-spacing: 0.12em; color: #f2ecdc; margin-bottom: 14px;">IN DE KOELKAST</div>' +
-          '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 26px;">' + stockRows + '</div>' +
+        '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 22px;">' +
+          '<div style="border: 2px solid rgba(242,236,220,0.3); border-radius: 12px; padding: 20px 26px;">' +
+            '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 36px; letter-spacing: 0.12em; color: #f2ecdc; margin-bottom: 14px;">IN DE KOELKAST</div>' +
+            '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 22px;">' + stockRows + '</div>' +
+          '</div>' +
+          '<div style="border: 2px solid rgba(242,236,220,0.3); border-radius: 12px; padding: 20px 26px;">' +
+            '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 36px; letter-spacing: 0.12em; color: #f2ecdc; margin-bottom: 14px;">HAPJES</div>' +
+            '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 22px;">' + snackRows + '</div>' +
+          '</div>' +
         '</div>' +
       '</div>' +
       '<div style="display: flex; flex-direction: column; gap: 24px; min-height: 0;">' +
@@ -627,18 +643,25 @@ function mainPanelHtml(d, panel) {
     '</div>';
   }
   // panel === 'stock'
-  const chips = deriveStock(d).map((c) =>
+  const chip = (c) =>
     '<div style="border: 2px solid rgba(242,236,220,0.25); border-radius: 12px; padding: 18px 22px; display: flex; align-items: center; gap: 16px;">' +
       stockThumbHtml(c, 52) +
       '<div style="min-width: 0;">' +
-        '<div style="font-size: 15px; letter-spacing: 0.22em; color: rgba(242,236,220,0.5);">' + esc(c.catCaps) + '</div>' +
+        (c.catCaps ? '<div style="font-size: 15px; letter-spacing: 0.22em; color: rgba(242,236,220,0.5);">' + esc(c.catCaps) + '</div>' : '') +
         '<div style="font-size: 27px; color: #f2ecdc; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(c.name) + '</div>' +
       '</div>' +
-    '</div>').join('');
-  return '<div style="position: absolute; inset: 0; padding: 50px 70px; box-sizing: border-box; animation: defles-fade 0.7s ease;">' +
+    '</div>';
+  const chips = deriveStock(d).map(chip).join('');
+  const snackChips = deriveSnacks(d).map(chip).join('');
+  const snacksBlock = snackChips
+    ? '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 64px; line-height: 1; letter-spacing: 0.08em; color: #f2ecdc; margin-top: 36px;">HAPJES</div>' +
+      '<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 18px;">' + snackChips + '</div>'
+    : '';
+  return '<div style="position: absolute; inset: 0; padding: 50px 70px; box-sizing: border-box; overflow: hidden; animation: defles-fade 0.7s ease;">' +
     '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 36px; color: #f4a259; line-height: 1; transform: rotate(-1deg);">koud &amp; klaar</div>' +
     '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 88px; line-height: 1; letter-spacing: 0.08em; color: #f2ecdc; text-shadow: 0 0 18px rgba(242,236,220,0.2);">IN DE KOELKAST</div>' +
     '<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 32px;">' + chips + '</div>' +
+    snacksBlock +
   '</div>';
 }
 

@@ -28,6 +28,11 @@ export const DEFAULT_STATE = {
     { id: 's7', name: 'Ketel 1', cat: 'Sterk', qty: 2 },
     { id: 's8', name: 'Jameson', cat: 'Sterk', qty: 1 }
   ],
+  snacks: [
+    { id: 'h1', name: 'Bitterballen', qty: 1, img: null },
+    { id: 'h2', name: 'Nootjes', qty: 1, img: null },
+    { id: 'h3', name: 'Kaasblokjes', qty: 1, img: null }
+  ],
   photos: [
     { id: 'p1', src: 'https://picsum.photos/seed/defles-a/1400/900', caption: 'Demo-foto — vervang via het beheerscherm' },
     { id: 'p2', src: 'https://picsum.photos/seed/defles-b/1400/900', caption: 'Demo-foto — vervang via het beheerscherm' },

@@ -248,6 +248,39 @@ function cardVoorraad(d) {
   '</div>';
 }
 
+function cardSnacks(d) {
+  const rows = (d.snacks || []).map((s, i) => {
+    const init = (s.name || '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '·';
+    const imgInner = s.img
+      ? '<img src="' + esc(s.img) + '" alt="" style="width: 100%; height: 100%; object-fit: cover;">'
+      : '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 17px; line-height: 1; color: #2c3e35;">' + esc(init) + '</div>';
+    const imgRemove = s.img
+      ? '<button data-act="rmSnackLogo" data-arg="' + i + '" aria-label="Afbeelding verwijderen" title="Afbeelding verwijderen" style="position: absolute; top: -5px; right: -5px; cursor: pointer; width: 17px; height: 17px; border-radius: 999px; border: none; background: rgba(28,24,18,0.85); color: #f2ecdc; font-size: 9px; line-height: 1; padding: 0;">✕</button>'
+      : '';
+    return '<div class="snack-row">' +
+      '<div style="position: relative; width: 41px; height: 41px; align-self: center;">' +
+        '<button data-act="pickSnackLogo" data-arg="' + i + '" title="Afbeelding uploaden" style="cursor: pointer; width: 41px; height: 41px; border-radius: 999px; border: 2px solid rgba(242,236,220,0.3); background: #faf6ec; padding: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; box-sizing: border-box;">' + imgInner + '</button>' +
+        imgRemove +
+      '</div>' +
+      '<input class="in" data-bind="snacks.' + i + '.name" value="' + esc(s.name) + '" placeholder="Naam">' +
+      '<div style="display: flex; align-items: center; gap: 6px;">' +
+        '<button class="btn-step" data-act="snackMinus" data-arg="' + i + '">−</button>' +
+        '<div data-sqty="' + i + '" style="flex: 1; text-align: center; font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 26px;">' + esc(s.qty != null ? s.qty : 1) + '</div>' +
+        '<button class="btn-step" data-act="snackPlus" data-arg="' + i + '">+</button>' +
+      '</div>' +
+      '<button class="btn-x" data-act="rmSnack" data-arg="' + i + '" aria-label="Verwijder">✕</button>' +
+    '</div>';
+  }).join('');
+  return '<div class="card">' +
+    '<div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px;">' +
+      '<div class="card-h">HAPJES</div>' +
+      '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 18px; color: rgba(242,236,220,0.55);">op TV verschijnt alleen de naam (+ afbeelding)</div>' +
+    '</div>' +
+    '<div class="stock-grid">' + rows + '</div>' +
+    '<button class="btn-dash" data-act="addSnack" style="margin-top: 14px;">+ HAPJE TOEVOEGEN</button>' +
+  '</div>';
+}
+
 function cardFotos(d) {
   const thumbs = d.photos.map((p, i) =>
     '<div style="background: #faf6ec; padding: 8px 8px 4px; box-shadow: 0 6px 16px rgba(0,0,0,0.35); transform: rotate(-0.8deg);">' +
@@ -477,7 +510,7 @@ function render() {
     '<div style="display: flex; flex-direction: column; gap: 20px;">' +
       '<div class="row2">' + cardScherm(d) + cardWeer(d) + '</div>' +
       '<div class="row2">' + cardTeksten(d) + cardMuziek(d) + '</div>' +
-      cardTap(d) + cardVoorraad(d) + cardFotos(d) + cardThema(d) + cardRadio(d) + cardEvents(d) + cardMail() +
+      cardTap(d) + cardVoorraad(d) + cardSnacks(d) + cardFotos(d) + cardThema(d) + cardRadio(d) + cardEvents(d) + cardMail() +
       '<div style="display: flex; justify-content: flex-end; padding: 4px;">' +
         '<button class="btn-ghost" data-act="reset">Terug naar voorbeelddata</button>' +
       '</div>' +
@@ -923,6 +956,22 @@ document.addEventListener('click', (e) => {
     case 'rmRadioLogo': mut((d) => { d.radio.logo = null; }, true); break;
     case 'addStock': mut((d) => { d.stock.push({ id: D.uid(), name: '', cat: 'Bier', qty: 6 }); }, true); break;
     case 'rmStock': mut((d) => { d.stock.splice(i, 1); }, true); break;
+    case 'addSnack': mut((d) => { if (!d.snacks) d.snacks = []; d.snacks.push({ id: D.uid(), name: '', qty: 1, img: null }); }, true); break;
+    case 'rmSnack': mut((d) => { d.snacks.splice(i, 1); }, true); break;
+    case 'snackMinus': {
+      mut((d) => { d.snacks[i].qty = Math.max(0, Number(d.snacks[i].qty) - 1); });
+      const el = cards.querySelector('[data-sqty="' + i + '"]');
+      if (el) el.textContent = client.get().snacks[i].qty;
+      break;
+    }
+    case 'snackPlus': {
+      mut((d) => { d.snacks[i].qty = Number(d.snacks[i].qty) + 1; });
+      const el = cards.querySelector('[data-sqty="' + i + '"]');
+      if (el) el.textContent = client.get().snacks[i].qty;
+      break;
+    }
+    case 'pickSnackLogo': { pendingCrop = (src) => mut((d) => { if (d.snacks[i]) d.snacks[i].img = src; }, true); const f = document.getElementById('logo-input'); if (f) f.click(); break; }
+    case 'rmSnackLogo': mut((d) => { delete d.snacks[i].img; }, true); break;
     case 'qtyMinus': {
       mut((d) => { d.stock[i].qty = Math.max(0, Number(d.stock[i].qty) - 1); });
       const el = cards.querySelector('[data-qty="' + i + '"]');
