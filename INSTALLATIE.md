@@ -140,31 +140,59 @@ bereikbaar zijn**. Zet daarbij **alleen** de publieke paden naar buiten —
 `/e/…` en `/api/rsvp/…` — en houd de rest (beheer, `/api/state`, mail) op je
 eigen netwerk. Doe dat met een reverse proxy die alleen die paden doorlaat.
 
-**Caddy:**
+De app serveert zelf een nette **placeholder** op `/welcome.html` en een
+**`/health`**-endpoint voor health-checks. De truc: laat de proxy alléén de
+publieke paden (`/e/…`, `/api/rsvp/…`, `/welcome.html`, `/health`) door naar de
+app, en stuur al het overige (ook `/admin`, `/api/state`) naar de placeholder.
+
+**Traefik** (docker-compose labels op de De Fles-container; pas host en
+certresolver aan):
+```yaml
+labels:
+  - traefik.enable=true
+  # Publieke paden → de app
+  - "traefik.http.routers.defles.rule=Host(`defles.doorkoppen.nl`) && (PathPrefix(`/e`) || PathPrefix(`/api/rsvp`) || Path(`/welcome.html`) || Path(`/health`))"
+  - traefik.http.routers.defles.entrypoints=websecure
+  - traefik.http.routers.defles.tls.certresolver=le
+  - traefik.http.routers.defles.service=defles
+  - traefik.http.services.defles.loadbalancer.server.port=8420
+  # Health-check op /health
+  - traefik.http.services.defles.loadbalancer.healthcheck.path=/health
+  - traefik.http.services.defles.loadbalancer.healthcheck.interval=30s
+  # Al het overige → placeholder (lagere prioriteit, herschrijft naar /welcome.html)
+  - "traefik.http.routers.defles-rest.rule=Host(`defles.doorkoppen.nl`)"
+  - traefik.http.routers.defles-rest.entrypoints=websecure
+  - traefik.http.routers.defles-rest.tls.certresolver=le
+  - traefik.http.routers.defles-rest.priority=1
+  - traefik.http.routers.defles-rest.service=defles
+  - traefik.http.routers.defles-rest.middlewares=defles-welcome
+  - traefik.http.middlewares.defles-welcome.replacepath.path=/welcome.html
 ```
-defles.jouwdomein.nl {
-    @rsvp path /e/* /api/rsvp/*
-    handle @rsvp {
-        reverse_proxy 192.168.1.10:8420
-    }
-    handle { respond 404 }
+(De container moet in hetzelfde Docker-netwerk als Traefik zitten.)
+
+**Caddy** (alternatief):
+```
+defles.doorkoppen.nl {
+    @public path /e/* /api/rsvp/* /welcome.html /health
+    handle @public { reverse_proxy 192.168.1.10:8420 }
+    handle { rewrite * /welcome.html; reverse_proxy 192.168.1.10:8420 }
 }
 ```
 
-**nginx:**
+**nginx** (alternatief):
 ```
 server {
-    server_name defles.jouwdomein.nl;
-    location ~ ^/(e/|api/rsvp/) {
+    server_name defles.doorkoppen.nl;
+    location ~ ^/(e/|api/rsvp/|welcome\.html|health) {
         proxy_pass http://192.168.1.10:8420;
         proxy_set_header X-Forwarded-For $remote_addr;
     }
-    location / { return 404; }
+    location / { rewrite ^ /welcome.html break; proxy_pass http://192.168.1.10:8420; }
 }
 ```
 
 Stel daarna in de **Mailserver**-kaart het **publieke adres** in
-(bv. `https://defles.jouwdomein.nl`); dat adres wordt gebruikt voor de links in
+(`https://defles.doorkoppen.nl`); dat adres wordt gebruikt voor de links in
 de mails én voor de "deelbare link"-knop. Een Cloudflare Tunnel met dezelfde
 pad-regels werkt ook.
 

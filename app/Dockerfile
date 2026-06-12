@@ -14,6 +14,6 @@ VOLUME /srv/defles/data
 
 EXPOSE 8420
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
-  CMD wget -qO- http://127.0.0.1:8420/api/state >/dev/null || exit 1
+  CMD wget -qO- http://127.0.0.1:8420/health >/dev/null || exit 1
 
 CMD ["node", "server.js"]

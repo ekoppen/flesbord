@@ -275,6 +275,12 @@ const server = http.createServer(async (req, res) => {
       return res.end();
     }
 
+    // Health-check (voor Traefik / Docker / uptime-monitors) — geen geheimen
+    if (p === '/health') {
+      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
+      return res.end('ok');
+    }
+
     // Gedeelde state
     if (p === '/api/state' && req.method === 'GET') return sendJson(res, 200, state);
 
