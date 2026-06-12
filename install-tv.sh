@@ -21,7 +21,19 @@ err()  { printf '\033[1;31mFOUT:\033[0m %s\n' "$*" >&2; exit 1; }
 ask()  { local v; printf '\033[1;36m  ? \033[0m%s ' "$1" > /dev/tty; read -r v < /dev/tty; echo "$v"; }
 
 # ---- 1. ADB regelen ----
-if ! command -v adb >/dev/null 2>&1; then
+# Belangrijk: gebruik één vaste adb-binary. Staan er meerdere versies op het
+# systeem (Android SDK + Homebrew), dan schieten client en server elkaar af
+# met 'protocol fault'-fouten. We kiezen er één en herstarten diens server.
+resolve_adb() {
+  local c
+  for c in "$HOME/Library/Android/sdk/platform-tools/adb" \
+           "$HOME/Android/Sdk/platform-tools/adb" \
+           "$(command -v adb 2>/dev/null || true)"; do
+    if [ -n "$c" ] && [ -x "$c" ]; then ADB_BIN="$c"; return 0; fi
+  done
+  return 1
+}
+if ! resolve_adb; then
   msg "ADB niet gevonden — installeren…"
   if [ "$(uname)" = "Darwin" ]; then
     command -v brew >/dev/null 2>&1 || err "Homebrew ontbreekt. Installeer ADB handmatig: brew install android-platform-tools"
@@ -31,7 +43,12 @@ if ! command -v adb >/dev/null 2>&1; then
   else
     err "Kon ADB niet automatisch installeren — installeer 'adb' (Android platform-tools) en draai dit script opnieuw."
   fi
+  resolve_adb || err "ADB is geïnstalleerd maar niet gevonden — open een nieuwe terminal en draai het script opnieuw."
 fi
+adb() { "$ADB_BIN" "$@"; }
+msg "ADB: $ADB_BIN"
+# Verse server van déze binary, zodat client en server altijd dezelfde versie zijn
+adb kill-server >/dev/null 2>&1 || true
 adb start-server >/dev/null 2>&1 || true
 
 # ---- 2. APK ophalen ----
@@ -118,7 +135,13 @@ if [ -z "$DEV" ]; then
     echo "    staat het gewone verbindingsadres (andere poort dan het koppel-adres)."
     CONN_ADDR="$(ask "Verbindingsadres (ip:poort):")"
   fi
-  echo "    adb zegt: $(adb connect "$CONN_ADDR" 2>&1)"
+  OUT="$(adb connect "$CONN_ADDR" 2>&1 || true)"
+  if printf '%s' "$OUT" | grep -qi 'protocol fault'; then
+    adb kill-server >/dev/null 2>&1 || true
+    adb start-server >/dev/null 2>&1 || true
+    OUT="$(adb connect "$CONN_ADDR" 2>&1 || true)"
+  fi
+  echo "    adb zegt: $OUT"
 fi
 
 # Wachten tot er een geautoriseerd apparaat is (popup op de TV)
