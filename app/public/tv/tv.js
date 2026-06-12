@@ -321,7 +321,7 @@ function topBarHtml(d, raster) {
     ? '<div style="flex-shrink: 0;">' +
         '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 26px; color: #f4a259; line-height: 1; transform: rotate(-1.5deg);">' + esc(d.welkom) + '</div>' +
         '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 74px; line-height: 0.95; letter-spacing: 0.04em; color: #f2ecdc; text-shadow: 0 0 14px rgba(242,236,220,0.18);">DE FLES</div>' +
-        '<div style="font-size: 14px; letter-spacing: 0.4em; color: rgba(242,236,220,0.55); margin-top: 2px;">BAR · TUINHUIS</div>' +
+        '<div data-tagline style="font-size: 14px; letter-spacing: 0.4em; color: rgba(242,236,220,0.55); margin-top: 2px; height: 18px; overflow: hidden; white-space: nowrap;">BAR · TUINHUIS</div>' +
       '</div>'
     : '<div style="flex-shrink: 0;">' +
         '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 25px; color: #f4a259; line-height: 1; transform: rotate(-1.5deg);">' + esc(d.welkom) + '</div>' +
@@ -702,6 +702,24 @@ function applyMusic() {
   setText('[data-music-source]', m.sourceCaps);
 }
 
+// Namen achter "DE FLES": F·L·E·S → Femke, Linde, Eelko, Suze. Loopt elke ~30s
+// als marquee onder "BAR · TUINHUIS" voorbij, met de eerste letters in accentkleur.
+const DEFLES_NAMES = ['FEMKE', 'LINDE', 'EELKO', 'SUZE'];
+const NAMES_HTML = DEFLES_NAMES
+  .map((n) => '<span style="color: #f4a259;">' + n[0] + '</span>' + n.slice(1))
+  .join('<span style="color: rgba(242,236,220,0.4);"> · </span>');
+
+function playNamesMarquee() {
+  for (const box of board.querySelectorAll('[data-tagline]')) {
+    const span = document.createElement('span');
+    span.style.cssText = 'display: inline-block; white-space: nowrap; animation: defles-marquee 11s linear;';
+    span.innerHTML = NAMES_HTML;
+    span.addEventListener('animationend', () => { box.textContent = 'BAR · TUINHUIS'; }, { once: true });
+    box.textContent = '';
+    box.appendChild(span);
+  }
+}
+
 // Korte pop-animatie op de badge zodra het aantal aanmeldingen stijgt.
 function pulseBadge() {
   const el = board.querySelector('[data-event-badge]');
@@ -971,6 +989,8 @@ async function main() {
     const slot = board.querySelector('[data-mid-slot]');
     if (slot) slot.innerHTML = midSlotHtml(d);
   }, 14000);
+  setInterval(playNamesMarquee, 30 * 1000);
+  setTimeout(playNamesMarquee, 6000); // ook kort na het opstarten een keer
   setInterval(refetchWeather, 15 * 60 * 1000);
   setInterval(refetchMusic, 5000);
   setInterval(refetchWk, 30 * 60 * 1000);
