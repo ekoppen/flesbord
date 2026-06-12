@@ -37,7 +37,7 @@ adb start-server >/dev/null 2>&1 || true
 # ---- 2. APK ophalen ----
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
-msg "APK ophalen van github.com/$REPO…"
+msg "APK ophalen van github.com/${REPO}…"
 curl -fsSL "$APK_URL" -o "$TMP/defles-bord.apk" || err "Kon de APK niet downloaden ($APK_URL)."
 
 # ---- 3. Verbinden met de TV ----
