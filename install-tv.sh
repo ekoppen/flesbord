@@ -114,34 +114,58 @@ if [ -z "$DEV" ]; then
 fi
 
 # Nog niet verbonden: route via 'Draadloze foutopsporing' (Chromecast/Google TV)
+do_pair() {
+  echo "    Kies op de TV: 'Apparaat koppelen met koppelingscode'."
+  echo "    Er verschijnen nu een 6-cijferige code en een koppel-adres (ip:poort)."
+  echo
+  local PAIR_ADDR PAIR_CODE
+  PAIR_ADDR="$(ask "Koppel-adres (ip:poort):")"
+  PAIR_CODE="$(ask "Koppelingscode (6 cijfers):")"
+  adb pair "$PAIR_ADDR" "$PAIR_CODE" || err "Koppelen mislukt — controleer code en adres en probeer opnieuw."
+  # Na het koppelen verbindt adb vaak al vanzelf — even kijken.
+  sleep 2
+  DEV="$(any_device)"
+}
+
+try_connect() { # $1 = ip:poort — geeft 0 terug als adb een verbinding meldt
+  local out
+  out="$(adb connect "$1" 2>&1 || true)"
+  if printf '%s' "$out" | grep -qi 'protocol fault'; then
+    adb kill-server >/dev/null 2>&1 || true
+    adb start-server >/dev/null 2>&1 || true
+    out="$(adb connect "$1" 2>&1 || true)"
+  fi
+  echo "    adb zegt: $out"
+  printf '%s' "$out" | grep -qi 'connected to'
+}
+
 if [ -z "$DEV" ]; then
   echo
   note "Directe verbinding lukte niet — we gebruiken 'Draadloze foutopsporing'."
   echo "    Open op de TV: Ontwikkelaarsopties → Draadloze foutopsporing → AAN."
   echo "    Op dat scherm staat een verbindingsadres (ip:poort)."
-  echo "    Is deze computer nog nooit gekoppeld? Druk dan zo Enter om eerst"
+  echo "    Is deze computer (nog) niet gekoppeld? Druk dan zo Enter om eerst"
   echo "    te koppelen met een koppelingscode."
   echo
   CONN_ADDR="$(ask "Verbindingsadres (ip:poort — of Enter om eerst te koppelen):")"
   if [ -z "$CONN_ADDR" ]; then
-    echo "    Kies op de TV: 'Apparaat koppelen met koppelingscode'."
-    echo "    Er verschijnen nu een 6-cijferige code en een koppel-adres (ip:poort)."
-    echo
-    PAIR_ADDR="$(ask "Koppel-adres (ip:poort):")"
-    PAIR_CODE="$(ask "Koppelingscode (6 cijfers):")"
-    adb pair "$PAIR_ADDR" "$PAIR_CODE" || err "Koppelen mislukt — controleer code en adres en probeer opnieuw."
-    echo
-    echo "    Gelukt. Terug op het hoofdscherm van 'Draadloze foutopsporing'"
-    echo "    staat het gewone verbindingsadres (andere poort dan het koppel-adres)."
-    CONN_ADDR="$(ask "Verbindingsadres (ip:poort):")"
+    do_pair
+    if [ -z "$DEV" ]; then
+      echo
+      echo "    Terug op het hoofdscherm van 'Draadloze foutopsporing' staat het"
+      echo "    gewone verbindingsadres (andere poort dan het koppel-adres)."
+      CONN_ADDR="$(ask "Verbindingsadres (ip:poort):")"
+    fi
   fi
-  OUT="$(adb connect "$CONN_ADDR" 2>&1 || true)"
-  if printf '%s' "$OUT" | grep -qi 'protocol fault'; then
-    adb kill-server >/dev/null 2>&1 || true
-    adb start-server >/dev/null 2>&1 || true
-    OUT="$(adb connect "$CONN_ADDR" 2>&1 || true)"
+  if [ -z "$DEV" ] && ! try_connect "$CONN_ADDR"; then
+    echo
+    note "De TV weigert de verbinding — dat betekent: (opnieuw) koppelen nodig."
+    do_pair
+    if [ -z "$DEV" ]; then
+      CONN_ADDR="$(ask "Verbindingsadres (ip:poort):")"
+      try_connect "$CONN_ADDR" || err "Verbinden blijft mislukken. Zet 'Draadloze foutopsporing' op de TV uit en weer aan, en draai het script opnieuw."
+    fi
   fi
-  echo "    adb zegt: $OUT"
 fi
 
 # Wachten tot er een geautoriseerd apparaat is (popup op de TV)
