@@ -53,10 +53,16 @@ TVIP_IN="$(ask "Wat is het IP-adres van de TV? (Instellingen → Netwerk en inte
 TVIP="${TVIP_IN%%:*}"   # eventueel meegetypte poort weghalen
 [ -n "$TVIP" ] || err "Geen IP-adres opgegeven."
 
-# Bij draadloze foutopsporing kan de TV onder zijn mDNS-naam in 'adb devices'
-# staan i.p.v. ip:poort — zoek daarom gewoon het eerste geautoriseerde apparaat.
-any_device() { adb devices | awk 'NR > 1 && $2 == "device" { print $1; exit }'; }
-any_unauthorized() { adb devices | awk 'NR > 1 && $2 == "unauthorized" { print $1; exit }'; }
+# Bij draadloze foutopsporing staat de TV onder zijn mDNS-naam in 'adb devices'
+# en die naam kan spaties bevatten (bv. "...Ljhzzz (2)._adb-tls-connect._tcp").
+# Daarom werken we met het transport_id (altijd een kaal nummer) en geven we
+# straks 'adb -t <id>' door in plaats van de naam.
+any_device() {
+  adb devices -l | awk 'NR > 1 && / device / {
+    if (match($0, /transport_id:[0-9]+/)) { print substr($0, RSTART + 13, RLENGTH - 13); exit }
+  }'
+}
+any_unauthorized() { adb devices | awk -F"\t" 'NR > 1 && $2 == "unauthorized" { print $1; exit }'; }
 
 DEV=""
 wait_device() { # $1 = max seconden wachten
@@ -125,14 +131,14 @@ if [ -z "$DEV" ]; then
     err "Geen geautoriseerde verbinding gekregen. Tip: zet 'Draadloze foutopsporing' op de TV even UIT en weer AAN, en draai het script opnieuw."
   }
 fi
-msg "Verbonden met: $DEV"
+MODEL="$(adb devices -l | awk -v t="transport_id:$DEV" 'index($0, t) { if (match($0, /model:[^ ]+/)) print substr($0, RSTART + 6, RLENGTH - 6) }')"
+msg "Verbonden met: ${MODEL:-apparaat} (transport $DEV)"
 
 # ---- 4. Installeren en starten ----
 msg "App installeren…"
-adb -s "$DEV" install -r "$TMP/defles-bord.apk" >/dev/null || err "Installatie mislukt."
+adb -t "$DEV" install -r "$TMP/defles-bord.apk" >/dev/null || err "Installatie mislukt."
 msg "App starten…"
-adb -s "$DEV" shell am start -n "$PKG/.MainActivity" >/dev/null 2>&1 || true
-adb disconnect "$DEV" >/dev/null 2>&1 || true
+adb -t "$DEV" shell am start -n "$PKG/.MainActivity" >/dev/null 2>&1 || true
 
 echo
 msg "Klaar! 'De Fles' staat op de TV (ook in de app-rij op het startscherm)."
