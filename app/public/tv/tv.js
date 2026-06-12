@@ -235,7 +235,7 @@ function radioPosterHtml(d) {
   let logoHtml = '';
   if (r.logo) {
     // eigen geüpload logo: enkel beeld, niet bijsnijden
-    logoHtml = '<div style="width: 88px; height: 88px; flex-shrink: 0; transform: rotate(2deg);"><img src="' + esc(r.logo) + '" alt="" style="width: 100%; height: 100%; object-fit: contain;"></div>';
+    logoHtml = '<div style="width: 132px; height: 132px; flex-shrink: 0; transform: rotate(2deg);"><img src="' + esc(r.logo) + '" alt="" style="width: 100%; height: 100%; object-fit: contain;"></div>';
   } else if (layers && layers.length) {
     // zenderlogo als laag-compositie (z-volgorde = array-volgorde)
     const stack = layers.map((l, idx) =>
@@ -243,9 +243,9 @@ function radioPosterHtml(d) {
       '; z-index: ' + idx + '; transform: translate(calc(-50% + ' + l.xPct + '%), calc(-50% + ' + l.yPct + '%)) rotate(' + l.rotation + 'deg);">' +
         '<img src="' + esc(l.url) + '" alt="" style="width: 100%; height: auto; display: block;">' +
       '</div>').join('');
-    logoHtml = '<div style="position: relative; width: 96px; height: 96px; flex-shrink: 0;">' + stack + '</div>';
+    logoHtml = '<div style="position: relative; width: 150px; height: 150px; flex-shrink: 0;">' + stack + '</div>';
   } else if (data && data.logo) {
-    logoHtml = '<div style="width: 88px; height: 88px; flex-shrink: 0; transform: rotate(2deg);"><img src="' + esc(data.logo) + '" alt="" style="width: 100%; height: 100%; object-fit: contain;"></div>';
+    logoHtml = '<div style="width: 132px; height: 132px; flex-shrink: 0; transform: rotate(2deg);"><img src="' + esc(data.logo) + '" alt="" style="width: 100%; height: 100%; object-fit: contain;"></div>';
   }
   let body;
   if (!data) {
