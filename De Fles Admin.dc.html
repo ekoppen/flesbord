@@ -152,18 +152,34 @@
       <!-- Op de tap -->
       <div style="border: 2px solid rgba(242,236,220,0.25); background: rgba(15,24,20,0.18); border-radius: 14px; padding: 24px 28px;">
         <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px;">
-          <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 33px; letter-spacing: 0.06em;">OP DE TAP</div>
-          <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 18px; color: rgba(242,236,220,0.55);">vat-niveau bepaalt het balkje op TV</div>
+          <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 33px; letter-spacing: 0.06em;">BIEREN <span style="font-size: 24px; color: rgba(242,236,220,0.55);">· {{ onTapCount }} op de tap</span></div>
+          <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 18px; color: rgba(242,236,220,0.55);">alleen bieren met de schakelaar aan staan op TV · klik op het rondje voor een eigen logo</div>
         </div>
+        <input type="file" accept="image/*" ref="{{ logoFileRef }}" onChange="{{ onLogoFile }}" style="display: none;">
         <div style="display: flex; flex-direction: column; gap: 10px;">
           <sc-for list="{{ tapRows }}" as="t" hint-placeholder-count="3">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 110px 170px 36px; gap: 10px; align-items: center;">
-              <input value="{{ t.name }}" onChange="{{ t.onName }}" placeholder="Naam" style="border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box; min-width: 0;" style-focus="border-color: #f4a259;">
-              <input value="{{ t.style }}" onChange="{{ t.onStyle }}" placeholder="Stijl · %" style="border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box; min-width: 0;" style-focus="border-color: #f4a259;">
-              <input value="{{ t.price }}" onChange="{{ t.onPrice }}" placeholder="€ 0,00" style="border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box; min-width: 0;" style-focus="border-color: #f4a259;">
-              <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="display: grid; grid-template-columns: 52px 1fr 1fr 110px 170px 88px 36px; gap: 10px; align-items: center;">
+              <div style="position: relative; width: 48px; height: 48px; opacity: {{ t.dim }};">
+                <button onClick="{{ t.onPickLogo }}" title="Eigen logo uploaden" style="cursor: pointer; width: 48px; height: 48px; border-radius: 999px; border: 2px solid rgba(242,236,220,0.3); background: #faf6ec; padding: 0; display: flex; align-items: center; justify-content: center; overflow: hidden;" style-hover="border-color: #f4a259;">
+                  <sc-if value="{{ t.hasLogo }}" hint-placeholder-val="{{ false }}"><img src="{{ t.logo }}" alt="" style="width: 80%; height: 80%; object-fit: contain;"></sc-if>
+                  <sc-if value="{{ t.noLogo }}" hint-placeholder-val="{{ true }}"><div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 21px; line-height: 1; color: #2c3e35;">{{ t.initials }}</div></sc-if>
+                </button>
+                <sc-if value="{{ t.hasLogo }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ t.onRemoveLogo }}" aria-label="Eigen logo verwijderen" title="Eigen logo verwijderen" style="position: absolute; top: -6px; right: -6px; cursor: pointer; width: 20px; height: 20px; border-radius: 999px; border: none; background: rgba(28,24,18,0.85); color: #f2ecdc; font-size: 10px; line-height: 1; padding: 0;">✕</button>
+                </sc-if>
+              </div>
+              <input value="{{ t.name }}" onChange="{{ t.onName }}" placeholder="Naam" style="opacity: {{ t.dim }}; border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box; min-width: 0;" style-focus="border-color: #f4a259;">
+              <input value="{{ t.style }}" onChange="{{ t.onStyle }}" placeholder="Stijl · %" style="opacity: {{ t.dim }}; border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box; min-width: 0;" style-focus="border-color: #f4a259;">
+              <input value="{{ t.price }}" onChange="{{ t.onPrice }}" placeholder="€ 0,00" style="opacity: {{ t.dim }}; border: 2px solid rgba(242,236,220,0.3); border-radius: 10px; padding: 8px 14px; font-family: 'Patrick Hand', cursive; font-size: 17px; background: rgba(242,236,220,0.07); color: #f2ecdc; outline: none; box-sizing: border-box; min-width: 0;" style-focus="border-color: #f4a259;">
+              <div style="display: flex; align-items: center; gap: 8px; opacity: {{ t.dim }};">
                 <input type="range" min="0" max="100" value="{{ t.level }}" onChange="{{ t.onLevel }}" style="flex: 1; accent-color: #f4a259;">
                 <div style="width: 38px; font-size: 15px; color: rgba(242,236,220,0.75); text-align: right;">{{ t.levelLabel }}</div>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: flex-end; gap: 7px;">
+                <div style="font-size: 13px; color: rgba(242,236,220,0.55);">tap</div>
+                <button onClick="{{ t.onToggleTap }}" aria-label="Op de tap" title="Op de tap tonen" style="cursor: pointer; border: none; width: 46px; height: 27px; border-radius: 999px; background: {{ t.tapBg }}; position: relative; padding: 0; flex-shrink: 0;">
+                  <div style="position: absolute; top: 3px; left: 3px; width: 21px; height: 21px; border-radius: 999px; background: #f2ecdc; box-shadow: 0 1px 3px rgba(0,0,0,0.35); transform: {{ t.tapKnob }}; transition: transform 0.2s ease;"></div>
+                </button>
               </div>
               <button onClick="{{ t.onRemove }}" aria-label="Verwijder" style="cursor: pointer; width: 36px; height: 36px; border-radius: 10px; border: 2px solid rgba(242,236,220,0.25); background: transparent; color: rgba(242,236,220,0.6); font-size: 15px; line-height: 1;" style-hover="color: #f4a259; border-color: #f4a259;">✕</button>
             </div>
@@ -176,7 +192,7 @@
       <div style="border: 2px solid rgba(242,236,220,0.25); background: rgba(15,24,20,0.18); border-radius: 14px; padding: 24px 28px;">
         <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px;">
           <div style="font-family: 'Amatic SC', cursive; font-weight: 700; font-size: 33px; letter-spacing: 0.06em;">VOORRAAD</div>
-          <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 18px; color: rgba(242,236,220,0.55);">bij 2 of minder kleurt het aantal oranje op TV</div>
+          <div style="font-family: 'Shadows Into Light Two', cursive; font-size: 18px; color: rgba(242,236,220,0.55);">aantallen zijn voor je eigen overzicht — op TV staan alleen de namen</div>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px;">
           <sc-for list="{{ stockRows }}" as="s" hint-placeholder-count="8">
@@ -311,6 +327,7 @@
 class Component extends DCLogic {
   state = { data: null, weatherQuery: '', weatherStatus: '', photoStatus: '', volumioStatus: '', spotifyStatus: '', spotifyTick: 0, wkStatus: '', savedAt: 0 };
   fileRef = React.createRef();
+  logoFileRef = React.createRef();
 
   async componentDidMount() {
     this.mod = await import('./defles-data.js');
@@ -388,6 +405,29 @@ class Component extends DCLogic {
     }
   }
 
+  // Eigen bierlogo: verkleind (max 240px) als PNG bij de tap opslaan
+  async addLogoFile(fileList) {
+    const f = (fileList && fileList[0]) || null;
+    const i = this.logoTapIdx;
+    if (!f || i == null) return;
+    try {
+      const url = URL.createObjectURL(f);
+      const img = await new Promise((res, rej) => {
+        const im = new Image();
+        im.onload = () => res(im); im.onerror = rej; im.src = url;
+      });
+      const maxSide = 240;
+      const ratio = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const cw = Math.round(img.width * ratio), ch = Math.round(img.height * ratio);
+      const cv = document.createElement('canvas');
+      cv.width = cw; cv.height = ch;
+      cv.getContext('2d').drawImage(img, 0, 0, cw, ch);
+      URL.revokeObjectURL(url);
+      const src = cv.toDataURL('image/png');
+      this.mutate((d) => { if (d.taps[i]) d.taps[i].logo = src; });
+    } catch (e) { /* onleesbaar bestand: niets doen */ }
+  }
+
   async addFiles(fileList) {
     const files = Array.from(fileList || []);
     if (!files.length) return;
@@ -453,6 +493,15 @@ class Component extends DCLogic {
     const tapRows = d.taps.map((t, i) => ({
       ...t,
       levelLabel: (t.level || 0) + '%',
+      dim: t.onTap !== false ? 1 : 0.45,
+      tapBg: t.onTap !== false ? '#f4a259' : 'rgba(242,236,220,0.25)',
+      tapKnob: t.onTap !== false ? 'translateX(19px)' : 'translateX(0)',
+      onToggleTap: () => mut((x) => { x.taps[i].onTap = !(x.taps[i].onTap !== false); }),
+      hasLogo: !!t.logo,
+      noLogo: !t.logo,
+      initials: (t.name || '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '·',
+      onPickLogo: () => { this.logoTapIdx = i; if (this.logoFileRef.current) this.logoFileRef.current.click(); },
+      onRemoveLogo: () => mut((x) => { delete x.taps[i].logo; }),
       onName: (e) => mut((x) => { x.taps[i].name = e.target.value; }),
       onStyle: (e) => mut((x) => { x.taps[i].style = e.target.value; }),
       onPrice: (e) => mut((x) => { x.taps[i].price = e.target.value; }),
@@ -549,7 +598,8 @@ class Component extends DCLogic {
       hasSpotifyStatus: !!this.state.spotifyStatus,
       // Tap / voorraad
       tapRows,
-      onAddTap: () => mut((x) => { x.taps.push({ id: mod.uid(), name: '', style: '', price: '', level: 100 }); }),
+      onTapCount: d.taps.filter((t) => t.onTap !== false).length,
+      onAddTap: () => mut((x) => { x.taps.push({ id: mod.uid(), name: '', style: '', price: '', level: 100, onTap: true }); }),
       stockRows,
       onAddStock: () => mut((x) => { x.stock.push({ id: mod.uid(), name: '', cat: 'Bier', qty: 6 }); }),
       // Foto's
@@ -558,6 +608,8 @@ class Component extends DCLogic {
       fileRef: this.fileRef,
       onPickFiles: () => { if (this.fileRef.current) this.fileRef.current.click(); },
       onFiles: (e) => { this.addFiles(e.target.files); e.target.value = ''; },
+      logoFileRef: this.logoFileRef,
+      onLogoFile: (e) => { this.addLogoFile(e.target.files); e.target.value = ''; },
       photoStatus: this.state.photoStatus,
       hasPhotoStatus: !!this.state.photoStatus,
       // Thema

@@ -153,22 +153,44 @@ function cardMuziek(d) {
 }
 
 function cardTap(d) {
-  const rows = d.taps.map((t, i) =>
-    '<div class="tap-row">' +
-      '<input class="in" data-bind="taps.' + i + '.name" value="' + esc(t.name) + '" placeholder="Naam">' +
-      '<input class="in" data-bind="taps.' + i + '.style" value="' + esc(t.style) + '" placeholder="Stijl · %">' +
-      '<input class="in" data-bind="taps.' + i + '.price" value="' + esc(t.price) + '" placeholder="€ 0,00">' +
-      '<div style="display: flex; align-items: center; gap: 8px;">' +
+  const rows = d.taps.map((t, i) => {
+    const on = t.onTap !== false;
+    const dim = on ? '1' : '0.45';
+    const initials = (t.name || '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '·';
+    const logoInner = t.logo
+      ? '<img src="' + esc(t.logo) + '" alt="" style="width: 80%; height: 80%; object-fit: contain;">'
+      : '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 21px; line-height: 1; color: #2c3e35;">' + esc(initials) + '</div>';
+    const logoRemove = t.logo
+      ? '<button data-act="rmLogo" data-arg="' + i + '" aria-label="Eigen logo verwijderen" title="Eigen logo verwijderen" style="position: absolute; top: -6px; right: -6px; cursor: pointer; width: 20px; height: 20px; border-radius: 999px; border: none; background: rgba(28,24,18,0.85); color: #f2ecdc; font-size: 10px; line-height: 1; padding: 0;">✕</button>'
+      : '';
+    return '<div class="tap-row">' +
+      '<div style="position: relative; width: 48px; height: 48px; opacity: ' + dim + ';">' +
+        '<button data-act="pickLogo" data-arg="' + i + '" title="Eigen logo uploaden" style="cursor: pointer; width: 48px; height: 48px; border-radius: 999px; border: 2px solid rgba(242,236,220,0.3); background: #faf6ec; padding: 0; display: flex; align-items: center; justify-content: center; overflow: hidden;">' + logoInner + '</button>' +
+        logoRemove +
+      '</div>' +
+      '<input class="in" data-bind="taps.' + i + '.name" value="' + esc(t.name) + '" placeholder="Naam" style="opacity: ' + dim + ';">' +
+      '<input class="in" data-bind="taps.' + i + '.style" value="' + esc(t.style) + '" placeholder="Stijl · %" style="opacity: ' + dim + ';">' +
+      '<input class="in" data-bind="taps.' + i + '.price" value="' + esc(t.price) + '" placeholder="€ 0,00" style="opacity: ' + dim + ';">' +
+      '<div style="display: flex; align-items: center; gap: 8px; opacity: ' + dim + ';">' +
         '<input type="range" min="0" max="100" data-bind="taps.' + i + '.level" data-num="1" value="' + esc(t.level) + '" style="flex: 1; accent-color: #f4a259;">' +
         '<div data-level-val style="width: 38px; font-size: 15px; color: rgba(242,236,220,0.75); text-align: right;">' + esc(t.level || 0) + '%</div>' +
       '</div>' +
+      '<div style="display: flex; align-items: center; justify-content: flex-end; gap: 7px;">' +
+        '<div style="font-size: 13px; color: rgba(242,236,220,0.55);">tap</div>' +
+        '<button data-act="toggleTap" data-arg="' + i + '" aria-label="Op de tap" title="Op de tap tonen" style="cursor: pointer; border: none; width: 46px; height: 27px; border-radius: 999px; background: ' + (on ? '#f4a259' : 'rgba(242,236,220,0.25)') + '; position: relative; padding: 0; flex-shrink: 0;">' +
+          '<div style="position: absolute; top: 3px; left: 3px; width: 21px; height: 21px; border-radius: 999px; background: #f2ecdc; box-shadow: 0 1px 3px rgba(0,0,0,0.35); transform: ' + (on ? 'translateX(19px)' : 'translateX(0)') + '; transition: transform 0.2s ease;"></div>' +
+        '</button>' +
+      '</div>' +
       '<button class="btn-x" data-act="rmTap" data-arg="' + i + '" aria-label="Verwijder">✕</button>' +
-    '</div>').join('');
+    '</div>';
+  }).join('');
+  const onTapCount = d.taps.filter((t) => t.onTap !== false).length;
   return '<div class="card">' +
     '<div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px;">' +
-      '<div class="card-h">OP DE TAP</div>' +
-      '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 18px; color: rgba(242,236,220,0.55);">vat-niveau bepaalt het balkje op TV</div>' +
+      '<div class="card-h">BIEREN <span style="font-size: 24px; color: rgba(242,236,220,0.55);">· ' + onTapCount + ' op de tap</span></div>' +
+      '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 18px; color: rgba(242,236,220,0.55);">alleen bieren met de schakelaar aan staan op TV · klik op het rondje voor een eigen logo</div>' +
     '</div>' +
+    '<input type="file" id="logo-input" accept="image/*" style="display: none;">' +
     '<div style="display: flex; flex-direction: column; gap: 10px;">' + rows + '</div>' +
     '<button class="btn-dash" data-act="addTap" style="margin-top: 14px;">+ BIER TOEVOEGEN</button>' +
   '</div>';
@@ -192,7 +214,7 @@ function cardVoorraad(d) {
   return '<div class="card">' +
     '<div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px;">' +
       '<div class="card-h">VOORRAAD</div>' +
-      '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 18px; color: rgba(242,236,220,0.55);">bij 2 of minder kleurt het aantal oranje op TV</div>' +
+      '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 18px; color: rgba(242,236,220,0.55);">aantallen zijn voor je eigen overzicht — op TV staan alleen de namen</div>' +
     '</div>' +
     '<div class="stock-grid">' + rows + '</div>' +
     '<button class="btn-dash" data-act="addStock" style="margin-top: 14px;">+ ARTIKEL TOEVOEGEN</button>' +
@@ -391,6 +413,30 @@ async function addFiles(fileList) {
   setStatus('photo', newPhotos.length ? '' : 'Uploaden mislukt — probeer het opnieuw.');
 }
 
+// Eigen bierlogo: verkleind (max 240px) als PNG bij het bier opslaan
+let logoTapIdx = null;
+async function addLogoFile(fileList) {
+  const f = (fileList && fileList[0]) || null;
+  const i = logoTapIdx;
+  if (!f || i == null) return;
+  try {
+    const url = URL.createObjectURL(f);
+    const img = await new Promise((res, rej) => {
+      const im = new Image();
+      im.onload = () => res(im); im.onerror = rej; im.src = url;
+    });
+    const maxSide = 240;
+    const ratio = Math.min(1, maxSide / Math.max(img.width, img.height));
+    const cw = Math.round(img.width * ratio), ch = Math.round(img.height * ratio);
+    const cv = document.createElement('canvas');
+    cv.width = cw; cv.height = ch;
+    cv.getContext('2d').drawImage(img, 0, 0, cw, ch);
+    URL.revokeObjectURL(url);
+    const src = cv.toDataURL('image/png');
+    mut((d) => { if (d.taps[i]) d.taps[i].logo = src; }, true);
+  } catch (e) { /* onleesbaar bestand: niets doen */ }
+}
+
 // ---------- events (delegatie) ----------
 
 document.addEventListener('input', (e) => {
@@ -412,6 +458,10 @@ document.addEventListener('change', (e) => {
     addFiles(e.target.files);
     e.target.value = '';
   }
+  if (e.target.id === 'logo-input') {
+    addLogoFile(e.target.files);
+    e.target.value = '';
+  }
 });
 
 document.addEventListener('keydown', (e) => {
@@ -429,8 +479,11 @@ document.addEventListener('click', (e) => {
     case 'mode': mut((d) => { d.music.mode = arg; }, true); break;
     case 'toggleMusic': mut((d) => { d.showMusic = !d.showMusic; }, true); break;
     case 'toggleTheme': mut((d) => { d.theme.enabled = !d.theme.enabled; }, true); break;
-    case 'addTap': mut((d) => { d.taps.push({ id: D.uid(), name: '', style: '', price: '', level: 100 }); }, true); break;
+    case 'addTap': mut((d) => { d.taps.push({ id: D.uid(), name: '', style: '', price: '', level: 100, onTap: true }); }, true); break;
     case 'rmTap': mut((d) => { d.taps.splice(i, 1); }, true); break;
+    case 'toggleTap': mut((d) => { d.taps[i].onTap = !(d.taps[i].onTap !== false); }, true); break;
+    case 'pickLogo': { logoTapIdx = i; const f = document.getElementById('logo-input'); if (f) f.click(); break; }
+    case 'rmLogo': mut((d) => { delete d.taps[i].logo; }, true); break;
     case 'addStock': mut((d) => { d.stock.push({ id: D.uid(), name: '', cat: 'Bier', qty: 6 }); }, true); break;
     case 'rmStock': mut((d) => { d.stock.splice(i, 1); }, true); break;
     case 'qtyMinus': {

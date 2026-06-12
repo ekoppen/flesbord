@@ -10,9 +10,15 @@ const frame = document.getElementById('frame');
 
 const app = {
   data: null, weather: null, liveMusic: null,
-  photoIdx: 0, panelIdx: 0,
+  photoIdx: 0, panelIdx: 0, middenIdx: 0,
+  logos: {}, wkAll: null,
   lastPlace: '', nextKey: ''
 };
+
+try {
+  const cached = JSON.parse(localStorage.getItem('defles-wk-all-v1') || 'null');
+  if (cached && cached.length) app.wkAll = cached;
+} catch (e) { /* leeg */ }
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -91,11 +97,54 @@ function deriveStock(d) {
 }
 
 function deriveTaps(d) {
-  return (d.taps || []).map((t) => ({
-    name: t.name, style: t.style,
-    priceStr: '€ ' + (t.price || '–'),
-    levelPct: Math.max(0, Math.min(100, Number(t.level) || 0)) + '%'
+  return (d.taps || []).filter((t) => t.onTap !== false).map((t) => {
+    const src = t.logo || app.logos[(t.name || '').trim().toLowerCase()] || '';
+    return {
+      name: t.name, style: t.style,
+      priceStr: '€ ' + (t.price || '–'),
+      levelPct: Math.max(0, Math.min(100, Number(t.level) || 0)) + '%',
+      logoSrc: src,
+      logoKey: (t.name || '').trim().toLowerCase(),
+      initials: (t.name || '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase()
+    };
+  });
+}
+
+// Middenvlak (raster): foto's afgewisseld met het volledige WK-speelschema
+function deriveWkAll(d, now) {
+  const theme = d.theme || {};
+  const allRaw = (app.wkAll && app.wkAll.length ? app.wkAll : (theme.matches || []));
+  const parsed = allRaw.map((m) => ({ ...m, dt: new Date(m.date + 'T' + (m.time || '12:00') + ':00') }));
+  const upcoming = parsed.filter((m) => m.dt > now && !m.score).sort((a, b) => a.dt - b.dt);
+  const next = upcoming[0] || null;
+  let countdown = '';
+  if (next) {
+    const diff = next.dt - now;
+    const dDays = Math.floor(diff / 86400000);
+    const dHrs = Math.floor((diff % 86400000) / 3600000);
+    const dMin = Math.floor((diff % 3600000) / 60000);
+    countdown = dDays > 0 ? 'over ' + dDays + 'd ' + dHrs + 'u' : (dHrs > 0 ? 'over ' + dHrs + 'u ' + dMin + 'm' : 'over ' + dMin + ' min');
+  }
+  const rows = upcoming.slice(1, 5).map((m) => ({
+    when: D.formatMatchDateNL(m.date),
+    teams: m.home + ' – ' + m.away,
+    time: m.time
   }));
+  return { next, countdown, rows };
+}
+
+function midViewsFor(d, now) {
+  const views = [];
+  if ((d.photos || []).length > 0) views.push('photos');
+  if (d.theme && d.theme.enabled && deriveWkAll(d, now).next) views.push('wk');
+  return views;
+}
+
+function logoCoasterHtml(t, size, initialsSize) {
+  const inner = t.logoSrc
+    ? '<img src="' + esc(t.logoSrc) + '" alt="" style="width: 80%; height: 80%; object-fit: contain;">'
+    : '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: ' + initialsSize + 'px; line-height: 1; color: #2c3e35;">' + esc(t.initials) + '</div>';
+  return '<div data-logo-for="' + esc(t.logoKey) + '" style="width: ' + size + 'px; height: ' + size + 'px; flex-shrink: 0; border-radius: 50%; background: #faf6ec; box-shadow: 0 ' + (size > 70 ? '6px 16px rgba(0,0,0,0.4)' : '5px 12px rgba(0,0,0,0.35)') + '; transform: rotate(-2deg); display: flex; align-items: center; justify-content: center; overflow: hidden;">' + inner + '</div>';
 }
 
 function musicVals(d) {
@@ -168,9 +217,17 @@ function topBarHtml(d, raster) {
         '<div data-clock style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 80px; line-height: 0.9; color: #f2ecdc;">' + fmtTime(now) + '</div>' +
         '<div data-date style="font-family: \'Shadows Into Light Two\', cursive; font-size: 22px; color: rgba(242,236,220,0.6);">' + esc(D.formatDateNL(now)) + '</div>' +
       '</div>';
+  const mededeling = (d.mededeling || '').trim();
+  const mededelingTop = raster && mededeling
+    ? '<div style="border: 3px double rgba(244,162,89,0.75); border-radius: 12px; padding: 10px 20px; display: flex; align-items: center; gap: 16px; min-width: 0; max-width: 540px; transform: rotate(0.3deg);">' +
+        '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 24px; color: #f4a259; flex-shrink: 0; transform: rotate(-2deg);">let op!</div>' +
+        '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 30px; line-height: 1.05; color: #f2ecdc; text-wrap: pretty; max-height: 64px; overflow: hidden;">' + esc(mededeling) + '</div>' +
+      '</div>'
+    : '';
   return '<div style="display: flex; align-items: center; gap: 34px; flex-shrink: 0;">' +
     wordmark + divider + clock + divider +
     '<div data-weather-slot style="display: flex; min-width: 0;">' + weatherHtml(raster) + '</div>' +
+    mededelingTop +
     '<div data-music-slot style="margin-left: auto; display: flex; min-width: 0;">' + musicPillHtml(d, raster) + '</div>' +
   '</div>';
 }
@@ -209,32 +266,74 @@ function polaroidHtml(d, raster) {
 
 // ---------- variant A: vast raster ----------
 
+// WK-poster in het middenvlak: zelfde "papier op het bord"-stijl als de polaroid
+function wkPosterHtml(d, now) {
+  const t = deriveTheme(d, now);
+  const wk = deriveWkAll(d, now);
+  if (!wk.next) return '';
+  const rows = wk.rows.map((m) =>
+    '<div style="display: flex; align-items: baseline; gap: 18px; padding: 8px 4px; border-bottom: 2px dotted rgba(74,67,55,0.25);">' +
+      '<div style="width: 112px; font-size: 18px; color: rgba(74,67,55,0.6); flex-shrink: 0;">' + esc(m.when) + '</div>' +
+      '<div style="flex: 1; font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 35px; line-height: 1; color: #2c3e35; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(m.teams) + '</div>' +
+      '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 24px; color: #c2540a; flex-shrink: 0;">' + esc(m.time) + '</div>' +
+    '</div>').join('');
+  return '<div style="width: 100%; height: 100%; min-height: 0; background: #faf6ec; padding: 26px 38px 22px; box-sizing: border-box; transform: rotate(0.8deg); box-shadow: 0 10px 30px rgba(0,0,0,0.4); display: flex; flex-direction: column; position: relative; animation: defles-fade 0.9s ease;">' +
+    '<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 18px; flex-shrink: 0;">' +
+      '<div>' +
+        '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 26px; color: #c2540a; line-height: 1; transform: rotate(-1deg);">eerstkomende wedstrijden</div>' +
+        '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 62px; line-height: 1; letter-spacing: 0.1em; color: #2c3e35;">' + esc(t.titleCaps) + '</div>' +
+      '</div>' +
+      '<div style="font-size: 14px; letter-spacing: 0.3em; color: rgba(74,67,55,0.5); flex-shrink: 0;">SPEELSCHEMA</div>' +
+    '</div>' +
+    '<div style="border: 3px double rgba(194,84,10,0.55); border-radius: 10px; padding: 12px 22px; margin-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-shrink: 0;">' +
+      '<div style="min-width: 0;">' +
+        '<div style="font-size: 13px; letter-spacing: 0.26em; color: rgba(74,67,55,0.55);">NU EERST</div>' +
+        '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 50px; line-height: 1; color: #2c3e35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(wk.next.home + ' – ' + wk.next.away) + '</div>' +
+        '<div style="font-size: 17px; color: rgba(74,67,55,0.6); margin-top: 2px;">' + esc(D.formatMatchDateNL(wk.next.date) + ' · ' + wk.next.time + ' uur') + '</div>' +
+      '</div>' +
+      '<div data-countdown-wk style="font-family: \'Shadows Into Light Two\', cursive; font-size: 36px; color: #c2540a; white-space: nowrap; flex-shrink: 0;">' + esc(wk.countdown) + '</div>' +
+    '</div>' +
+    '<div style="flex: 1; min-height: 0; margin-top: 6px; overflow: hidden; display: flex; flex-direction: column;">' + rows + '</div>' +
+    '<div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%) rotate(-2deg); width: 120px; height: 28px; background: rgba(242,236,220,0.45); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"></div>' +
+  '</div>';
+}
+
+function midSlotHtml(d) {
+  const now = new Date();
+  const views = midViewsFor(d, now);
+  if (!views.length) {
+    return '<div style="width: 100%; height: 100%; border: 3px dashed rgba(242,236,220,0.3); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">' +
+      '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 32px; color: rgba(242,236,220,0.55);">Nog geen foto’s — voeg ze toe via het beheerscherm</div></div>';
+  }
+  const active = views[app.middenIdx % views.length];
+  return active === 'wk' ? wkPosterHtml(d, now) : polaroidHtml(d, true);
+}
+
 function rasterHtml(d) {
   const now = new Date();
   const t = deriveTheme(d, now);
   const taps = deriveTaps(d);
   const stock = deriveStock(d);
-  const mededeling = (d.mededeling || '').trim();
 
   const stockRows = stock.map((c) =>
-    '<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px; border-bottom: 2px dotted rgba(242,236,220,0.3); padding: 4px 2px;">' +
-      '<div style="font-size: 19px; color: rgba(242,236,220,0.9); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(c.name) + '</div>' +
-      '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 27px; color: ' + c.chalkColor + '; flex-shrink: 0;">' + esc(c.qty) + '</div>' +
-    '</div>').join('');
+    '<div style="border-bottom: 2px dotted rgba(242,236,220,0.3); padding: 5px 2px; font-size: 24px; color: rgba(242,236,220,0.92); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(c.name) + '</div>').join('');
 
   const tapRows = taps.map((tp) =>
-    '<div style="padding: 14px 0; border-bottom: 1px solid rgba(242,236,220,0.12);">' +
-      '<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px;">' +
-        '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 41px; line-height: 1; color: #f2ecdc; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(tp.name) + '</div>' +
-        '<div style="flex: 1; border-bottom: 2px dotted rgba(242,236,220,0.3); transform: translateY(-7px); min-width: 20px;"></div>' +
-        '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 33px; color: #f4a259; flex-shrink: 0;">' + esc(tp.priceStr) + '</div>' +
-      '</div>' +
-      '<div style="display: flex; align-items: center; gap: 14px; margin-top: 6px;">' +
-        '<div style="font-size: 17px; color: rgba(242,236,220,0.55); flex-shrink: 0;">' + esc(tp.style) + '</div>' +
-        '<div style="flex: 1; height: 6px; border-radius: 999px; background: rgba(242,236,220,0.15);">' +
-          '<div style="height: 6px; border-radius: 999px; background: #f4a259; width: ' + tp.levelPct + ';"></div>' +
+    '<div style="padding: 12px 0; border-bottom: 1px solid rgba(242,236,220,0.12); display: flex; align-items: center; gap: 18px;">' +
+      '<div style="flex: 1; min-width: 0;">' +
+        '<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px;">' +
+          '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 41px; line-height: 1; color: #f2ecdc; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(tp.name) + '</div>' +
+          '<div style="flex: 1; border-bottom: 2px dotted rgba(242,236,220,0.3); transform: translateY(-7px); min-width: 20px;"></div>' +
+          '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 33px; color: #f4a259; flex-shrink: 0;">' + esc(tp.priceStr) + '</div>' +
+        '</div>' +
+        '<div style="display: flex; align-items: center; gap: 14px; margin-top: 6px;">' +
+          '<div style="font-size: 17px; color: rgba(242,236,220,0.55); flex-shrink: 0;">' + esc(tp.style) + '</div>' +
+          '<div style="flex: 1; height: 6px; border-radius: 999px; background: rgba(242,236,220,0.15);">' +
+            '<div style="height: 6px; border-radius: 999px; background: #f4a259; width: ' + tp.levelPct + ';"></div>' +
+          '</div>' +
         '</div>' +
       '</div>' +
+      logoCoasterHtml(tp, 60, 28) +
     '</div>').join('');
 
   const matchRows = t.matchRows.map((m) =>
@@ -279,23 +378,15 @@ function rasterHtml(d) {
       '</div>'
     : '';
 
-  const mededelingBlock = mededeling
-    ? '<div style="border: 3px double rgba(244,162,89,0.75); border-radius: 12px; padding: 18px 26px; display: flex; align-items: center; gap: 22px; transform: rotate(0.3deg);">' +
-        '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 32px; color: #f4a259; flex-shrink: 0; transform: rotate(-2deg);">let op!</div>' +
-        '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 40px; line-height: 1.1; color: #f2ecdc; text-wrap: pretty;">' + esc(mededeling) + '</div>' +
-      '</div>'
-    : '';
-
   return '<div data-screen-label="TV — Krijtbord raster" style="position: absolute; inset: 0; display: flex; flex-direction: column; gap: 22px; padding: 36px 50px 42px; box-sizing: border-box;">' +
     topBarHtml(d, true) +
     '<div style="border-top: 3px dashed rgba(242,236,220,0.35); flex-shrink: 0;"></div>' +
     '<div style="flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 470px; gap: 36px;">' +
       '<div style="display: flex; flex-direction: column; gap: 24px; min-height: 0; min-width: 0;">' +
-        '<div style="flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;">' + polaroidHtml(d, true) + '</div>' +
-        mededelingBlock +
-        '<div style="border: 2px solid rgba(242,236,220,0.3); border-radius: 12px; padding: 18px 24px;">' +
-          '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 34px; letter-spacing: 0.12em; color: #f2ecdc; margin-bottom: 12px;">IN DE KOELKAST</div>' +
-          '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 9px;">' + stockRows + '</div>' +
+        '<div data-mid-slot style="flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;">' + midSlotHtml(d) + '</div>' +
+        '<div style="border: 2px solid rgba(242,236,220,0.3); border-radius: 12px; padding: 20px 26px;">' +
+          '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 36px; letter-spacing: 0.12em; color: #f2ecdc; margin-bottom: 14px;">IN DE KOELKAST</div>' +
+          '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 26px;">' + stockRows + '</div>' +
         '</div>' +
       '</div>' +
       '<div style="display: flex; flex-direction: column; gap: 24px; min-height: 0;">' +
@@ -321,13 +412,16 @@ function mainPanelHtml(d, panel) {
   }
   if (panel === 'tap') {
     const tapRows = deriveTaps(d).map((tp) =>
-      '<div style="padding: 20px 0; border-bottom: 1px solid rgba(242,236,220,0.12);">' +
-        '<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px;">' +
-          '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 62px; line-height: 1; color: #f2ecdc;">' + esc(tp.name) + '</div>' +
-          '<div style="flex: 1; border-bottom: 3px dotted rgba(242,236,220,0.3); transform: translateY(-10px);"></div>' +
-          '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 48px; color: #f4a259;">' + esc(tp.priceStr) + '</div>' +
+      '<div style="padding: 16px 0; border-bottom: 1px solid rgba(242,236,220,0.12); display: flex; align-items: center; gap: 30px;">' +
+        '<div style="flex: 1; min-width: 0;">' +
+          '<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px;">' +
+            '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 62px; line-height: 1; color: #f2ecdc; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(tp.name) + '</div>' +
+            '<div style="flex: 1; border-bottom: 3px dotted rgba(242,236,220,0.3); transform: translateY(-10px); min-width: 30px;"></div>' +
+            '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 48px; color: #f4a259; flex-shrink: 0;">' + esc(tp.priceStr) + '</div>' +
+          '</div>' +
+          '<div style="font-size: 22px; color: rgba(242,236,220,0.55); margin-top: 4px;">' + esc(tp.style) + '</div>' +
         '</div>' +
-        '<div style="font-size: 22px; color: rgba(242,236,220,0.55); margin-top: 4px;">' + esc(tp.style) + '</div>' +
+        logoCoasterHtml(tp, 88, 40) +
       '</div>').join('');
     return '<div style="position: absolute; inset: 0; padding: 44px 80px; box-sizing: border-box; display: flex; flex-direction: column; animation: defles-fade 0.7s ease;">' +
       '<div style="text-align: center;">' +
@@ -381,10 +475,7 @@ function mainPanelHtml(d, panel) {
   const chips = deriveStock(d).map((c) =>
     '<div style="border: 2px solid rgba(242,236,220,0.25); border-radius: 12px; padding: 18px 22px;">' +
       '<div style="font-size: 15px; letter-spacing: 0.22em; color: rgba(242,236,220,0.5);">' + esc(c.catCaps) + '</div>' +
-      '<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 4px;">' +
-        '<div style="font-size: 23px; color: #f2ecdc; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(c.name) + '</div>' +
-        '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 44px; line-height: 1; color: ' + c.chalkColor + ';">' + esc(c.qty) + '</div>' +
-      '</div>' +
+      '<div style="font-size: 27px; color: #f2ecdc; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(c.name) + '</div>' +
     '</div>').join('');
   return '<div style="position: absolute; inset: 0; padding: 50px 70px; box-sizing: border-box; animation: defles-fade 0.7s ease;">' +
     '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 36px; color: #f4a259; line-height: 1; transform: rotate(-1deg);">koud &amp; klaar</div>' +
@@ -469,7 +560,47 @@ function tick() {
     const t = deriveTheme(d, now);
     if (t.nextKey !== app.nextKey) { renderBoard(); return; }
     if (t.next) setText('[data-countdown]', t.countdownStr);
+    const wk = deriveWkAll(d, now);
+    if (wk.next) setText('[data-countdown-wk]', wk.countdown);
   }
+}
+
+// Viltjes bijwerken zodra een automatisch logo binnenkomt (zonder herrender)
+function applyLogo(key) {
+  const d = app.data;
+  if (!d) return;
+  const t = deriveTaps(d).find((x) => x.logoKey === key);
+  if (!t) return;
+  for (const el of board.querySelectorAll('[data-logo-for="' + CSS.escape(key) + '"]')) {
+    const size = parseInt(el.style.width, 10) || 60;
+    el.outerHTML = logoCoasterHtml(t, size, size > 70 ? 40 : 28);
+  }
+}
+
+async function loadLogos() {
+  const d = app.data;
+  if (!d) return;
+  for (const t of (d.taps || [])) {
+    const key = (t.name || '').trim().toLowerCase();
+    if (!key || key in app.logos) continue;
+    app.logos[key] = '';
+    try {
+      const src = await D.fetchBeerLogo(t.name);
+      if (src) { app.logos[key] = src; applyLogo(key); }
+    } catch (e) { /* offline: initialen blijven staan */ }
+  }
+}
+
+// Volledig WK-programma (alle landen) voor de wisselende middenweergave
+async function refetchWkAll() {
+  const d = app.data;
+  if (!d || !d.theme || !d.theme.enabled) return;
+  try {
+    const r = await D.fetchWkSchedule({ ...(d.theme.api || {}), team: '' });
+    if (!r.matches.length) return;
+    app.wkAll = r.matches;
+    try { localStorage.setItem('defles-wk-all-v1', JSON.stringify(r.matches)); } catch (e) { /* quota */ }
+  } catch (e) { /* offline: cache blijft staan */ }
 }
 
 function applyScale() {
@@ -549,13 +680,16 @@ async function main() {
   }
   renderBoard();
   refetchWeather();
+  loadLogos();
   setTimeout(refetchMusic, 300);
   setTimeout(refetchWk, 800);
+  setTimeout(refetchWkAll, 1200);
 
   client.watch((d) => {
     app.data = d;
     renderBoard();
     maybeRefetchWeather();
+    loadLogos();
   });
 
   setInterval(tick, 1000);
@@ -575,9 +709,20 @@ async function main() {
     const dots = board.querySelector('[data-panel-dots]');
     if (dots) dots.innerHTML = dotsHtml(panels.length, app.panelIdx % panels.length, 'chalk');
   }, 12000);
+  // Middenvlak (raster): wisselt elke 14 s tussen foto's en het WK-schema
+  setInterval(() => {
+    const d = app.data;
+    if (!d || d.variant === 'roterend') return;
+    const views = midViewsFor(d, new Date());
+    if (views.length < 2) return;
+    app.middenIdx++;
+    const slot = board.querySelector('[data-mid-slot]');
+    if (slot) slot.innerHTML = midSlotHtml(d);
+  }, 14000);
   setInterval(refetchWeather, 15 * 60 * 1000);
   setInterval(refetchMusic, 5000);
   setInterval(refetchWk, 30 * 60 * 1000);
+  setInterval(refetchWkAll, 30 * 60 * 1000);
 }
 
 main();

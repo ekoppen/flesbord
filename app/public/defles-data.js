@@ -13,9 +13,9 @@ export const DEFAULT_STATE = {
   spotifyAuth: null,
   weatherPlace: { name: 'Utrecht', lat: 52.09, lon: 5.12 },
   taps: [
-    { id: 't1', name: 'Hertog Jan', style: 'Pilsener · 5,1%', price: '2,80', level: 78 },
-    { id: 't2', name: 'La Chouffe', style: 'Blond · 8,0%', price: '4,50', level: 52 },
-    { id: 't3', name: 'La Trappe Tripel', style: 'Tripel · 8,0%', price: '4,20', level: 64 }
+    { id: 't1', name: 'Hertog Jan', style: 'Pilsener · 5,1%', price: '2,80', level: 78, onTap: true },
+    { id: 't2', name: 'La Chouffe', style: 'Blond · 8,0%', price: '4,50', level: 52, onTap: true },
+    { id: 't3', name: 'La Trappe Tripel', style: 'Tripel · 8,0%', price: '4,20', level: 64, onTap: true }
   ],
   stock: [
     { id: 's1', name: 'Westmalle Dubbel', cat: 'Bier', qty: 12 },
@@ -202,6 +202,36 @@ export async function fetchWkSchedule(api) {
     standings = standings.slice(0, 8).map((r) => ({ team: r.team, g: r.g, pts: r.pts }));
   } catch (e) { /* geen stand beschikbaar (bekerfase) */ }
   return { matches, standings };
+}
+
+// ---- Bierlogo's: automatisch opgezocht via Wikipedia, met cache in localStorage ----
+const LOGO_CACHE_KEY = 'defles-beer-logos-v1';
+function logoCache() {
+  try { return JSON.parse(localStorage.getItem(LOGO_CACHE_KEY) || '{}'); } catch (e) { return {}; }
+}
+export async function fetchBeerLogo(name) {
+  const key = (name || '').trim().toLowerCase();
+  if (!key) return null;
+  const cache = logoCache();
+  if (key in cache) return cache[key];
+  async function tryWiki(lang, search) {
+    const url = 'https://' + lang + '.wikipedia.org/w/api.php?action=query&format=json&origin=*' +
+      '&prop=pageimages&piprop=thumbnail&pithumbsize=320&generator=search&gsrlimit=1&gsrsearch=' +
+      encodeURIComponent(search);
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const j = await res.json();
+    const pages = (j.query && j.query.pages) || {};
+    const first = Object.values(pages)[0];
+    return first && first.thumbnail ? first.thumbnail.source : null;
+  }
+  let src = null;
+  try { src = await tryWiki('nl', name + ' bier'); } catch (e) { /* offline */ }
+  if (!src) { try { src = await tryWiki('en', name + ' beer'); } catch (e) { /* offline */ } }
+  const c = logoCache();
+  c[key] = src;
+  try { localStorage.setItem(LOGO_CACHE_KEY, JSON.stringify(c)); } catch (e) { /* quota */ }
+  return src;
 }
 
 // ---- Volumio — via de server-proxy (/api/volumio), want Volumio stuurt geen
