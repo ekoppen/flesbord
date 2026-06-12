@@ -141,7 +141,16 @@ function saveMail(cfg) {
   // Owner-only: bevat het SMTP-wachtwoord in platte tekst.
   fs.writeFileSync(MAIL_FILE, JSON.stringify(cfg, null, 1), { mode: 0o600 });
   try { fs.chmodSync(MAIL_FILE, 0o600); } catch (e) { /* bv. op een FS zonder rechten */ }
+  publicHostCache = hostFromBase(cfg.publicBase || '');
 }
+
+// Hostnaam waarop het publieke (internet)deel draait — afgeleid van het
+// 'publieke adres' in de mailinstellingen. Verzoeken op deze host krijgen
+// alleen het publieke RSVP-deel te zien; beheer/state blijven verborgen.
+function hostFromBase(b) {
+  try { return new URL(b).hostname.toLowerCase(); } catch (e) { return ''; }
+}
+let publicHostCache = hostFromBase((loadMail().publicBase) || '');
 // Veilige versie voor de admin-UI: wachtwoord wordt nooit teruggestuurd.
 function mailPublicView(cfg) {
   return { host: cfg.host || '', port: cfg.port || 587, secure: !!cfg.secure, user: cfg.user || '', from: cfg.from || '', publicBase: cfg.publicBase || '', hasPass: !!cfg.pass };
@@ -279,6 +288,19 @@ const server = http.createServer(async (req, res) => {
     if (p === '/health') {
       res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
       return res.end('ok');
+    }
+
+    // Publieke-host-afscherming: komt het verzoek binnen op het publieke domein
+    // (= host van het 'publieke adres'), dan is alléén het RSVP-deel zichtbaar.
+    // Zo blijven beheer/TV/state verborgen, ongeacht de reverse-proxy-config.
+    const reqHost = (req.headers.host || '').split(':')[0].toLowerCase();
+    if (publicHostCache && reqHost === publicHostCache) {
+      const allowed = p === '/welcome.html' || p === '/e' || p.startsWith('/e/') || p.startsWith('/api/rsvp/') || p === '/api/rsvp';
+      if (!allowed) {
+        if (req.method === 'GET') return serveFile(res, path.join(PUBLIC_DIR, 'welcome.html'));
+        res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+        return res.end('Niet beschikbaar');
+      }
     }
 
     // Gedeelde state

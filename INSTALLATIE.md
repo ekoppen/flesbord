@@ -136,61 +136,31 @@ komen nooit op de TV of de publieke pagina terecht.
 ## 5. De RSVP-pagina veilig naar buiten zetten
 
 Gasten reageren meestal van afstand, dus de **RSVP-pagina moet vanaf internet
-bereikbaar zijn**. Zet daarbij **alleen** de publieke paden naar buiten —
-`/e/…` en `/api/rsvp/…` — en houd de rest (beheer, `/api/state`, mail) op je
-eigen netwerk. Doe dat met een reverse proxy die alleen die paden doorlaat.
+bereikbaar zijn**. Dat is veilig: de app **beschermt zichzelf** op basis van het
+**publieke adres**.
 
-De app serveert zelf een nette **placeholder** op `/welcome.html` en een
-**`/health`**-endpoint voor health-checks. De truc: laat de proxy alléén de
-publieke paden (`/e/…`, `/api/rsvp/…`, `/welcome.html`, `/health`) door naar de
-app, en stuur al het overige (ook `/admin`, `/api/state`) naar de placeholder.
+**Stap 1 — zet het publieke adres.** Vul in het beheerscherm bij de
+**Mailserver**-kaart het **publieke adres** in: `https://defles.doorkoppen.nl`.
+Zodra dat is ingesteld, geldt: verzoeken die op díe hostnaam binnenkomen zien
+**alleen** het RSVP-deel (`/e/…`, `/api/rsvp/…`), de **placeholder** (`/welcome.html`)
+en `/health`. Al het overige op dat domein — ook `/`, `/admin` en `/api/state` —
+toont gewoon de placeholder; er lekt niets. Via je **LAN-IP** (`http://<lxc-ip>:8420`)
+heb je nog steeds volledige toegang tot beheer en TV. Dit adres voedt ook de
+links in de mails en de "deelbare link"-knop.
 
-**Traefik** (docker-compose labels op de De Fles-container; pas host en
-certresolver aan):
-```yaml
-labels:
-  - traefik.enable=true
-  # Publieke paden → de app
-  - "traefik.http.routers.defles.rule=Host(`defles.doorkoppen.nl`) && (PathPrefix(`/e`) || PathPrefix(`/api/rsvp`) || Path(`/welcome.html`) || Path(`/health`))"
-  - traefik.http.routers.defles.entrypoints=websecure
-  - traefik.http.routers.defles.tls.certresolver=le
-  - traefik.http.routers.defles.service=defles
-  - traefik.http.services.defles.loadbalancer.server.port=8420
-  # Health-check op /health
-  - traefik.http.services.defles.loadbalancer.healthcheck.path=/health
-  - traefik.http.services.defles.loadbalancer.healthcheck.interval=30s
-  # Al het overige → placeholder (lagere prioriteit, herschrijft naar /welcome.html)
-  - "traefik.http.routers.defles-rest.rule=Host(`defles.doorkoppen.nl`)"
-  - traefik.http.routers.defles-rest.entrypoints=websecure
-  - traefik.http.routers.defles-rest.tls.certresolver=le
-  - traefik.http.routers.defles-rest.priority=1
-  - traefik.http.routers.defles-rest.service=defles
-  - traefik.http.routers.defles-rest.middlewares=defles-welcome
-  - traefik.http.middlewares.defles-welcome.replacepath.path=/welcome.html
-```
-(De container moet in hetzelfde Docker-netwerk als Traefik zitten.)
+**Stap 2 — reverse proxy.** Omdat de app zichzelf afschermt, hoeft de proxy
+alleen het hele domein naar de app te sturen (host:poort, **geen pad**), met de
+health-check op `/health`.
 
-**Traefik — De Fles op een aparte LXC** (Traefik elders): gebruik de
-file/dynamic provider. Het **doeladres is host:poort, zónder pad**; `/welcome.html`
-komt van de middleware, `/health` is de aparte healthcheck:
+**Traefik — De Fles op een aparte LXC** (file/dynamic provider):
 ```yaml
 http:
   routers:
     defles:
-      rule: "Host(`defles.doorkoppen.nl`) && (PathPrefix(`/e`) || PathPrefix(`/api/rsvp`) || Path(`/welcome.html`) || Path(`/health`))"
-      entryPoints: [websecure]
-      service: defles
-      tls: { certResolver: le }
-    defles-rest:                       # al het overige → placeholder
       rule: "Host(`defles.doorkoppen.nl`)"
-      priority: 1
       entryPoints: [websecure]
       service: defles
-      middlewares: [defles-welcome]
       tls: { certResolver: le }
-  middlewares:
-    defles-welcome:
-      replacePath: { path: /welcome.html }
   services:
     defles:
       loadBalancer:
@@ -201,35 +171,26 @@ http:
           interval: 30s
 ```
 
-**Caddy** (alternatief):
-```
-defles.doorkoppen.nl {
-    @public path /e/* /api/rsvp/* /welcome.html /health
-    handle @public { reverse_proxy 192.168.1.10:8420 }
-    handle { rewrite * /welcome.html; reverse_proxy 192.168.1.10:8420 }
-}
-```
-
-**nginx** (alternatief):
-```
-server {
-    server_name defles.doorkoppen.nl;
-    location ~ ^/(e/|api/rsvp/|welcome\.html|health) {
-        proxy_pass http://192.168.1.10:8420;
-        proxy_set_header X-Forwarded-For $remote_addr;
-    }
-    location / { rewrite ^ /welcome.html break; proxy_pass http://192.168.1.10:8420; }
-}
+**Traefik — De Fles als container in Traefiks Docker-netwerk** (labels):
+```yaml
+labels:
+  - traefik.enable=true
+  - "traefik.http.routers.defles.rule=Host(`defles.doorkoppen.nl`)"
+  - traefik.http.routers.defles.entrypoints=websecure
+  - traefik.http.routers.defles.tls.certresolver=le
+  - traefik.http.services.defles.loadbalancer.server.port=8420
+  - traefik.http.services.defles.loadbalancer.healthcheck.path=/health
+  - traefik.http.services.defles.loadbalancer.healthcheck.interval=30s
 ```
 
-Stel daarna in de **Mailserver**-kaart het **publieke adres** in
-(`https://defles.doorkoppen.nl`); dat adres wordt gebruikt voor de links in
-de mails én voor de "deelbare link"-knop. Een Cloudflare Tunnel met dezelfde
-pad-regels werkt ook.
+**Caddy** (alternatief): `defles.doorkoppen.nl { reverse_proxy 192.168.178.205:8420 }`
 
-> De RSVP-endpoints zijn token-afgeschermd (een onjuiste link geeft 404) en
-> hebben rate-limiting tegen misbruik. Het beheer zelf heeft bewust geen login;
-> daarom mag dat deel niet mee naar buiten.
+Een Cloudflare Tunnel naar `http://192.168.178.205:8420` werkt net zo.
+
+> De RSVP-endpoints zijn bovendien token-afgeschermd (een onjuiste link geeft
+> 404) en hebben rate-limiting tegen misbruik. **Belangrijk:** zonder ingevuld
+> publiek adres schermt de app niets af — vul stap 1 dus echt in voordat je het
+> domein naar buiten zet.
 
 ## 6. Veiligheid
 
