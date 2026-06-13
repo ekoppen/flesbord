@@ -5,7 +5,8 @@ ENV NODE_ENV=production \
     PORT=8420
 
 WORKDIR /srv/defles
-COPY package.json server.js ./
+COPY package.json server.js zip.js ./
+COPY vendor ./vendor
 COPY public ./public
 
 # Gedeelde state + geüploade foto's; wordt als volume gemount
