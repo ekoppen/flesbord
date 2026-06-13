@@ -11,7 +11,11 @@ import fsp from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DEFAULT_STATE, deepMerge, uid, token as makeToken, partyLinkStatus, usedPhotoNames } from './public/defles-data.js';
+import { DEFAULT_STATE, deepMerge, uid, token as makeToken, partyLinkStatus, usedPhotoNames, albumByToken, albumStatus } from './public/defles-data.js';
+import { createRequire } from 'node:module';
+import { zipStore } from './zip.js';
+const require = createRequire(import.meta.url);
+const qrcode = require('./vendor/qrcode-generator.cjs');
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(ROOT, 'public');
@@ -20,6 +24,7 @@ const PHOTO_DIR = path.join(DATA_DIR, 'photos');
 const STATE_FILE = path.join(DATA_DIR, 'state.json');
 const MAIL_FILE = path.join(DATA_DIR, 'mail.json');
 const PORT = Number(process.env.PORT || 8420);
+const ALBUM_TTL_MS = 30 * 24 * 60 * 60 * 1000; // album-link 30 dagen geldig
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -333,7 +338,8 @@ const server = http.createServer(async (req, res) => {
     if (publicHostCache && reqHost === publicHostCache) {
       const allowed = p === '/welcome.html' || p === '/e' || p.startsWith('/e/') || p.startsWith('/api/rsvp/') || p === '/api/rsvp'
         || p === '/foto' || p.startsWith('/foto/')
-        || (p.startsWith('/api/party/') && p !== '/api/party/new');
+        || (p.startsWith('/api/party/') && p !== '/api/party/new' && p !== '/api/party/close')
+        || p === '/album' || p.startsWith('/album/') || p.startsWith('/api/album/');
       if (!allowed) {
         if (req.method === 'GET') return serveFile(res, path.join(PUBLIC_DIR, 'welcome.html'));
         res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -548,6 +554,112 @@ const server = http.createServer(async (req, res) => {
         } catch (e) { failed.push(to); }
       }
       return sendJson(res, 200, { sent, failed });
+    }
+
+    // ---- Avond afsluiten: party-pool -> album, daarna pool leeg ----
+    if (p === '/api/party/close' && req.method === 'POST') {
+      if (!state.party || !(state.party.photos || []).length) {
+        return sendJson(res, 400, { error: 'geen foto’s om in een album te zetten' });
+      }
+      let body = {};
+      try { body = JSON.parse((await readBody(req, 16 * 1024)).toString('utf8')); } catch (e) { /* leeg = geen koppeling */ }
+      const eventId = String(body.eventId || '').trim();
+      const ev = eventId ? (state.events || []).find((e) => e.id === eventId) : null;
+      const now = Date.now();
+      const album = {
+        id: uid(),
+        token: makeToken(),
+        title: ev ? ev.title : ('De Fles — ' + new Date(now).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })),
+        whenISO: (ev && ev.whenISO) ? ev.whenISO : new Date(now).toISOString().slice(0, 16),
+        createdAt: now,
+        expiresAt: now + ALBUM_TTL_MS,
+        eventId: ev ? ev.id : '',
+        photos: state.party.photos.slice()
+      };
+      state.albums = state.albums || [];
+      state.albums.push(album);
+      state.party = { token: null, expiresAt: 0, photos: [] };
+      schedulePersist();
+      broadcast('');
+
+      let emailed = 0;
+      const cfg = loadMail();
+      const base = (cfg.publicBase || '').replace(/\/+$/, '');
+      if (ev && cfg.host && cfg.from && base) {
+        const link = base + '/album/' + album.token;
+        const tot = new Date(album.expiresAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
+        const seen = new Set();
+        for (const r of (ev.rsvps || [])) {
+          const to = String(r.email || '').trim();
+          if (!to || seen.has(to.toLowerCase())) continue;
+          seen.add(to.toLowerCase());
+          try {
+            await sendMail(cfg, { to, subject: 'Foto’s van ' + album.title, text: 'Hoi' + (r.name ? ' ' + r.name : '') + '!\n\nDe foto’s van ' + album.title + ' staan klaar. Bekijk en bewaar ze hier:\n\n' + link + '\n\n(De link werkt tot ' + tot + '.)\n\nGroet — De Fles' });
+            emailed++;
+          } catch (e) { /* best effort per adres */ }
+        }
+      }
+
+      const ownBase = (req.headers.host ? 'http://' + req.headers.host : '').replace(/\/+$/, '');
+      return sendJson(res, 200, { id: album.id, token: album.token, title: album.title, expiresAt: album.expiresAt, url: ownBase + '/album/' + album.token, emailed });
+    }
+
+    // ---- Album-pagina (statisch) ----
+    if (p === '/album' || p.startsWith('/album/')) {
+      return serveFile(res, path.join(PUBLIC_DIR, 'album', 'index.html'));
+    }
+
+    // ---- Publieke album-API: meta / qr.svg / zip ----
+    if (p.startsWith('/api/album/')) {
+      const rest = p.slice('/api/album/'.length);   // "<token>" | "<token>/zip" | "<token>/qr.svg"
+      let tok = rest, kind = 'meta';
+      if (rest.endsWith('/zip')) { tok = rest.slice(0, -'/zip'.length); kind = 'zip'; }
+      else if (rest.endsWith('/qr.svg')) { tok = rest.slice(0, -'/qr.svg'.length); kind = 'qr'; }
+      tok = decodeURIComponent(tok);
+      const album = albumByToken(state.albums, tok);
+      if (albumStatus(album, Date.now()) !== 'ok') return sendJson(res, 410, { error: 'verlopen' });
+
+      if (kind === 'meta' && req.method === 'GET') {
+        return sendJson(res, 200, {
+          title: album.title, whenISO: album.whenISO, expiresAt: album.expiresAt,
+          photos: album.photos.map((ph) => ({ src: ph.src, name: ph.name || '' }))
+        });
+      }
+
+      if (kind === 'qr' && req.method === 'GET') {
+        const base = (loadMail().publicBase || '').replace(/\/+$/, '') || (req.headers.host ? 'http://' + req.headers.host : '');
+        const qr = qrcode(0, 'M');
+        qr.addData(base + '/album/' + album.token);
+        qr.make();
+        const svg = qr.createSvgTag({ cellSize: 4, margin: 2 });
+        res.writeHead(200, { 'Content-Type': 'image/svg+xml; charset=utf-8', 'Cache-Control': 'no-cache', 'Access-Control-Allow-Origin': '*' });
+        return res.end(svg);
+      }
+
+      if (kind === 'zip' && req.method === 'GET') {
+        const files = [];
+        for (let i = 0; i < album.photos.length; i++) {
+          const ph = album.photos[i];
+          if (!(ph.src || '').startsWith('/photos/')) continue;
+          const fname = path.basename(ph.src);
+          try {
+            const data = await fsp.readFile(path.join(PHOTO_DIR, fname));
+            const ext = path.extname(fname) || '.jpg';
+            const who = (ph.name || '').replace(/[^a-zA-Z0-9_-]+/g, '_').slice(0, 30);
+            const nice = String(i + 1).padStart(3, '0') + (who ? '-' + who : '') + ext;
+            files.push({ name: nice, data });
+          } catch (e) { /* ontbrekend bestand overslaan */ }
+        }
+        const zip = zipStore(files);
+        const dlname = 'de-fles-' + String(album.whenISO || '').slice(0, 10) + '.zip';
+        res.writeHead(200, {
+          'Content-Type': 'application/zip',
+          'Content-Disposition': 'attachment; filename="' + dlname + '"',
+          'Content-Length': zip.length,
+          'Access-Control-Allow-Origin': '*'
+        });
+        return res.end(zip);
+      }
     }
 
     // ---- PUBLIEK + token-afgeschermd: gasten-foto's ----
