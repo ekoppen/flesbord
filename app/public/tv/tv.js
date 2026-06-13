@@ -420,11 +420,17 @@ function partyPhotos(d) {
   return ((d.party && d.party.photos) || []).slice(-40);
 }
 
+function partyCaption(p) {
+  return p.name ? '— ' + p.name : '';
+}
+
+// Deelt bewust app.photoIdx met de curated foto's: elke tick stappen beide
+// weergaven één vooruit (elk modulo de eigen lijstlengte).
 function partyPolaroidHtml(d, raster) {
   const photos = partyPhotos(d);
   if (!photos.length) return '';
   const p = photos[mod(app.photoIdx, photos.length)];
-  const caption = p.name ? '— ' + p.name : '';
+  const caption = partyCaption(p);
   const dots = dotsHtml(photos.length, mod(app.photoIdx, photos.length), 'light');
   return polaroidShellHtml(p.src, caption, dots, raster, 'party');
 }
@@ -742,7 +748,8 @@ function applyPhoto() {
 
 function applyParty() {
   const d = app.data;
-  const photos = partyPhotos(d || {});
+  if (!d) return;
+  const photos = partyPhotos(d);
   if (!photos.length) return;
   const p = photos[mod(app.photoIdx, photos.length)];
   const img = board.querySelector('[data-party-img]');
@@ -752,7 +759,7 @@ function applyParty() {
     void img.offsetWidth;
     img.style.animation = 'defles-fade 0.9s ease';
   }
-  setText('[data-party-caption]', p.name ? '— ' + p.name : '');
+  setText('[data-party-caption]', partyCaption(p));
   const dots = board.querySelector('[data-party-dots]');
   if (dots) dots.innerHTML = dotsHtml(photos.length, mod(app.photoIdx, photos.length), 'light');
 }
@@ -991,9 +998,10 @@ function stepView(delta) {
     app.middenIdx += delta;
     const slot = board.querySelector('[data-mid-slot]');
     if (slot) slot.innerHTML = midSlotHtml(d);
-  } else if ((d.photos || []).length > 1) {
+  } else if ((d.photos || []).length > 1 || partyPhotos(d).length > 1) {
     app.photoIdx += delta;
     applyPhoto();
+    applyParty();
   }
 }
 
