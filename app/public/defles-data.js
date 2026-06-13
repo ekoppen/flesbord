@@ -76,7 +76,8 @@ export const DEFAULT_STATE = {
       token: 'demo-wk-japan', showOnTv: true, closed: false,
       inviteList: '', rsvps: []
     }
-  ]
+  ],
+  party: { token: null, expiresAt: 0, photos: [] }
 };
 
 // Ingebouwde leeuw (heraldisch, rampant) — opgebouwd uit vormen met een
@@ -181,6 +182,27 @@ export function token() {
   const b = new Uint8Array(16);
   crypto.getRandomValues(b);
   return Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+}
+
+// Status van een gasten-link: 'ok' (token klopt én niet verlopen),
+// 'expired' (token klopt maar voorbij de vervaltijd) of 'unknown' (geen/ander token).
+export function partyLinkStatus(party, token, now) {
+  if (!party || !party.token || !token || party.token !== token) return 'unknown';
+  if (!party.expiresAt || now >= party.expiresAt) return 'expired';
+  return 'ok';
+}
+
+// Bestandsnamen van álle foto's waar de state naar verwijst — zowel de curated
+// foto's als de gasten-pool. De server gebruikt dit om te bepalen welke
+// fotobestanden bewaard moeten blijven (de gasten-pool krimpt nooit).
+export function usedPhotoNames(state) {
+  const names = new Set();
+  const add = (src) => {
+    if (typeof src === 'string' && src.startsWith('/photos/')) names.add(src.slice('/photos/'.length));
+  };
+  for (const ph of (state && state.photos) || []) add(ph && ph.src);
+  for (const ph of (state && state.party && state.party.photos) || []) add(ph && ph.src);
+  return names;
 }
 
 // ---- WK-schema via TheSportsDB (gratis sleutel: 123, WK = competitie 4429) ----
