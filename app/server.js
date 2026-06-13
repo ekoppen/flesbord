@@ -600,7 +600,7 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
-      const ownBase = (req.headers.host ? 'http://' + req.headers.host : '').replace(/\/+$/, '');
+      const ownBase = base || (req.headers.host ? 'http://' + req.headers.host : '').replace(/\/+$/, '');
       return sendJson(res, 200, { id: album.id, token: album.token, title: album.title, expiresAt: album.expiresAt, url: ownBase + '/album/' + album.token, emailed });
     }
 
@@ -628,6 +628,7 @@ const server = http.createServer(async (req, res) => {
 
       if (kind === 'qr' && req.method === 'GET') {
         const base = (loadMail().publicBase || '').replace(/\/+$/, '') || (req.headers.host ? 'http://' + req.headers.host : '');
+        // typeNumber 0 = auto-formaat; de korte album-URL past ruim.
         const qr = qrcode(0, 'M');
         qr.addData(base + '/album/' + album.token);
         qr.make();
@@ -650,6 +651,7 @@ const server = http.createServer(async (req, res) => {
             files.push({ name: nice, data });
           } catch (e) { /* ontbrekend bestand overslaan */ }
         }
+        if (!files.length) return sendJson(res, 404, { error: "geen foto’s meer beschikbaar" });
         const zip = zipStore(files);
         const dlname = 'de-fles-' + String(album.whenISO || '').slice(0, 10) + '.zip';
         res.writeHead(200, {
@@ -660,6 +662,7 @@ const server = http.createServer(async (req, res) => {
         });
         return res.end(zip);
       }
+      return sendJson(res, 405, { error: 'methode niet toegestaan' });
     }
 
     // ---- PUBLIEK + token-afgeschermd: gasten-foto's ----
