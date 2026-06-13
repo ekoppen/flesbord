@@ -523,7 +523,7 @@ function partyLink(d) {
 }
 
 function partyActive(d) {
-  return D.partyLinkStatus(d.party, d.party && d.party.token, Date.now()) === 'ok';
+  return !!(d.party && d.party.token && d.party.expiresAt > Date.now());
 }
 
 function cardFeest(d) {
@@ -534,7 +534,7 @@ function cardFeest(d) {
     : '';
   const top =
     '<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">' +
-      '<h2 style="margin: 0;">FEEST · FOTO’S VAN GASTEN</h2>' +
+      '<div class="card-h">FEEST · FOTO’S VAN GASTEN</div>' +
       '<span style="font-size: 14px; color: rgba(242,236,220,0.55);">' + (d.party && d.party.photos ? d.party.photos.length : 0) + ' foto’s</span>' +
     '</div>' +
     '<p style="font-size: 15px; color: rgba(242,236,220,0.6); margin: 6px 0 16px;">Laat gasten een foto op het bord zetten met hun telefoon. De QR-link verloopt 24 uur na het genereren.</p>';
