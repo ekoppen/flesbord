@@ -11,7 +11,7 @@ import fsp from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DEFAULT_STATE, deepMerge, uid } from './public/defles-data.js';
+import { DEFAULT_STATE, deepMerge, uid, token as makeToken, partyLinkStatus, usedPhotoNames } from './public/defles-data.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(ROOT, 'public');
@@ -66,9 +66,7 @@ function schedulePersist() {
 // Gracetijd van 10 min: een upload gebeurt vóór de state-update die ernaar wijst.
 async function prunePhotos() {
   try {
-    const used = new Set((state.photos || [])
-      .map((p) => (p.src || '').startsWith('/photos/') ? path.basename(p.src) : null)
-      .filter(Boolean));
+    const used = usedPhotoNames(state);
     for (const f of await fsp.readdir(PHOTO_DIR)) {
       if (used.has(f)) continue;
       const st = await fsp.stat(path.join(PHOTO_DIR, f)).catch(() => null);
