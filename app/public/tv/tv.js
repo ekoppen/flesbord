@@ -187,6 +187,7 @@ function eventBadgeHtml(d) {
 function midViewsFor(d, now) {
   const views = [];
   if ((d.photos || []).length > 0) views.push('photos');
+  if (partyPhotos(d).length > 0) views.push('party');
   if (d.theme && d.theme.enabled && deriveWkAll(d, now).next) views.push('wk');
   if (radioOn(d)) views.push('radio');
   return views;
@@ -231,6 +232,7 @@ function musicView(d) {
 function panelsFor(d) {
   const panels = [];
   if ((d.photos || []).length > 0) panels.push('photos');
+  if (partyPhotos(d).length > 0) panels.push('party');
   panels.push('tap');
   if (d.theme && d.theme.enabled) panels.push('theme');
   if ((d.stock || []).length > 0) panels.push('stock');
@@ -378,6 +380,31 @@ function topBarHtml(d, raster) {
   '</div>';
 }
 
+function polaroidShellHtml(src, caption, dots, raster, ns) {
+  if (raster) {
+    return '<div style="width: 100%; height: 100%; min-height: 0; background: #faf6ec; padding: 16px 16px 64px; box-sizing: border-box; transform: rotate(-1.2deg); box-shadow: 0 10px 30px rgba(0,0,0,0.4); display: flex; flex-direction: column; position: relative;">' +
+      '<div style="flex: 1; min-height: 0; overflow: hidden; position: relative; background: #ddd6c6;">' +
+        '<img data-' + ns + '-img src="' + esc(src) + '" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: defles-fade 0.9s ease;">' +
+      '</div>' +
+      '<div style="position: absolute; left: 22px; right: 22px; bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">' +
+        '<div data-' + ns + '-caption style="font-family: \'Shadows Into Light Two\', cursive; font-size: 27px; color: #4a4337; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(caption) + '</div>' +
+        '<div data-' + ns + '-dots>' + dots + '</div>' +
+      '</div>' +
+      '<div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%) rotate(2deg); width: 120px; height: 28px; background: rgba(242,236,220,0.45); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"></div>' +
+    '</div>';
+  }
+  return '<div style="height: 100%; aspect-ratio: 3 / 2.15; max-width: 100%; background: #faf6ec; padding: 14px 14px 56px; box-sizing: border-box; transform: rotate(-1deg); box-shadow: 0 12px 36px rgba(0,0,0,0.45); position: relative;">' +
+    '<div style="width: 100%; height: 100%; overflow: hidden; position: relative; background: #ddd6c6;">' +
+      '<img data-' + ns + '-img src="' + esc(src) + '" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;">' +
+    '</div>' +
+    '<div style="position: absolute; left: 20px; right: 20px; bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">' +
+      '<div data-' + ns + '-caption style="font-family: \'Shadows Into Light Two\', cursive; font-size: 26px; color: #4a4337; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(caption) + '</div>' +
+      '<div data-' + ns + '-dots>' + dots + '</div>' +
+    '</div>' +
+    '<div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%) rotate(2deg); width: 110px; height: 26px; background: rgba(242,236,220,0.5); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"></div>' +
+  '</div>';
+}
+
 function polaroidHtml(d, raster) {
   const photos = d.photos || [];
   if (!photos.length) {
@@ -386,28 +413,20 @@ function polaroidHtml(d, raster) {
   }
   const p = photos[mod(app.photoIdx, photos.length)];
   const dots = dotsHtml(photos.length, mod(app.photoIdx, photos.length), 'light');
-  if (raster) {
-    return '<div style="width: 100%; height: 100%; min-height: 0; background: #faf6ec; padding: 16px 16px 64px; box-sizing: border-box; transform: rotate(-1.2deg); box-shadow: 0 10px 30px rgba(0,0,0,0.4); display: flex; flex-direction: column; position: relative;">' +
-      '<div style="flex: 1; min-height: 0; overflow: hidden; position: relative; background: #ddd6c6;">' +
-        '<img data-photo-img src="' + esc(p.src) + '" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: defles-fade 0.9s ease;">' +
-      '</div>' +
-      '<div style="position: absolute; left: 22px; right: 22px; bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">' +
-        '<div data-photo-caption style="font-family: \'Shadows Into Light Two\', cursive; font-size: 27px; color: #4a4337; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(p.caption) + '</div>' +
-        '<div data-photo-dots>' + dots + '</div>' +
-      '</div>' +
-      '<div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%) rotate(2deg); width: 120px; height: 28px; background: rgba(242,236,220,0.45); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"></div>' +
-    '</div>';
-  }
-  return '<div style="height: 100%; aspect-ratio: 3 / 2.15; max-width: 100%; background: #faf6ec; padding: 14px 14px 56px; box-sizing: border-box; transform: rotate(-1deg); box-shadow: 0 12px 36px rgba(0,0,0,0.45); position: relative;">' +
-    '<div style="width: 100%; height: 100%; overflow: hidden; position: relative; background: #ddd6c6;">' +
-      '<img data-photo-img src="' + esc(p.src) + '" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;">' +
-    '</div>' +
-    '<div style="position: absolute; left: 20px; right: 20px; bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">' +
-      '<div data-photo-caption style="font-family: \'Shadows Into Light Two\', cursive; font-size: 26px; color: #4a4337; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(p.caption) + '</div>' +
-      '<div data-photo-dots>' + dots + '</div>' +
-    '</div>' +
-    '<div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%) rotate(2deg); width: 110px; height: 26px; background: rgba(242,236,220,0.5); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"></div>' +
-  '</div>';
+  return polaroidShellHtml(p.src, p.caption || '', dots, raster, 'photo');
+}
+
+function partyPhotos(d) {
+  return ((d.party && d.party.photos) || []).slice(-40);
+}
+
+function partyPolaroidHtml(d, raster) {
+  const photos = partyPhotos(d);
+  if (!photos.length) return '';
+  const p = photos[mod(app.photoIdx, photos.length)];
+  const caption = p.name ? '— ' + p.name : '';
+  const dots = dotsHtml(photos.length, mod(app.photoIdx, photos.length), 'light');
+  return polaroidShellHtml(p.src, caption, dots, raster, 'party');
 }
 
 // ---------- variant A: vast raster ----------
@@ -454,6 +473,7 @@ function midSlotHtml(d) {
   const active = views[mod(app.middenIdx, views.length)];
   if (active === 'wk') return wkPosterHtml(d, now);
   if (active === 'radio') return radioPosterHtml(d);
+  if (active === 'party') return partyPolaroidHtml(d, true);
   return polaroidHtml(d, true);
 }
 
@@ -574,6 +594,10 @@ function mainPanelHtml(d, panel) {
   if (panel === 'photos') {
     return '<div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 30px; animation: defles-fade 0.7s ease;">' +
       polaroidHtml(d, false) + '</div>';
+  }
+  if (panel === 'party') {
+    return '<div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 30px; animation: defles-fade 0.7s ease;">' +
+      partyPolaroidHtml(d, false) + '</div>';
   }
   if (panel === 'tap') {
     const tapRows = deriveTaps(d).map((tp) =>
@@ -714,6 +738,23 @@ function applyPhoto() {
   setText('[data-photo-caption]', p.caption || '');
   const dots = board.querySelector('[data-photo-dots]');
   if (dots) dots.innerHTML = dotsHtml(d.photos.length, mod(app.photoIdx, d.photos.length), 'light');
+}
+
+function applyParty() {
+  const d = app.data;
+  const photos = partyPhotos(d || {});
+  if (!photos.length) return;
+  const p = photos[mod(app.photoIdx, photos.length)];
+  const img = board.querySelector('[data-party-img]');
+  if (img) {
+    img.src = p.src;
+    img.style.animation = 'none';
+    void img.offsetWidth;
+    img.style.animation = 'defles-fade 0.9s ease';
+  }
+  setText('[data-party-caption]', p.name ? '— ' + p.name : '');
+  const dots = board.querySelector('[data-party-dots]');
+  if (dots) dots.innerHTML = dotsHtml(photos.length, mod(app.photoIdx, photos.length), 'light');
 }
 
 function applyMusic() {
@@ -1001,9 +1042,11 @@ async function main() {
   setInterval(tick, 1000);
   setInterval(() => {
     const d = app.data;
-    if (!d || (d.photos || []).length === 0) return;
+    const hasParty = d && partyPhotos(d).length > 0;
+    if (!d || ((d.photos || []).length === 0 && !hasParty)) return;
     app.photoIdx++;
     applyPhoto();
+    applyParty();
   }, 9000);
   setInterval(() => {
     const d = app.data;
