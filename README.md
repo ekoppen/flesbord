@@ -99,6 +99,14 @@ Kaarten (border 2px krijt, radius 14, achtergrond `rgba(15,24,20,0.18)`, koppen 
 
 Alles slaat **direct bij elke wijziging** op (geen save-knop).
 
+### Foto's van gasten (QR)
+
+In het beheerscherm onder **FEEST · FOTO'S VAN GASTEN** genereer je een QR-code.
+Gasten scannen die, kiezen op hun telefoon een foto + naam, en die verschijnt
+live op het bord in de view "Foto's van het feest". De QR-link verloopt 24 uur
+na het genereren; geüploade foto's blijven bewaard in `data/photos/`. Met de ✕
+naast een foto haal je 'm direct van het bord.
+
 ## State & synchronisatie
 In het prototype delen TV en beheer één `localStorage`-key (`defles-state-v1`); de TV pollt elke 2 s + luistert naar `storage`-events. **In productie moet dit een gedeelde backend worden** (de Chromecast en de telefoon zijn aparte apparaten): bv. een mini-server (Raspberry Pi/NAS) met een JSON-state-endpoint + websocket/SSE-push, of een gehoste KV-store. De TV-pagina cast je via een Chromecast (tab-cast of als ontvanger-app/kiosk).
 
