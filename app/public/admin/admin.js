@@ -551,10 +551,26 @@ function cardFeest(d) {
       '</div>'
     : '<div style="font-size: 15px; color: rgba(242,236,220,0.5); padding: 8px 0 16px;">Nog geen actief feest — genereer een QR-code om te beginnen.</div>';
 
+  const items = (d.party && d.party.photos) || [];
+  const grid = items.length
+    ? '<div style="border-top: 1px solid rgba(242,236,220,0.12); margin-top: 16px; padding-top: 14px;">' +
+        '<div style="font-size: 13px; color: rgba(242,236,220,0.55); margin-bottom: 8px;">Binnengekomen foto’s — tik ✕ om er één van het bord te halen</div>' +
+        '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; max-height: 320px; overflow-y: auto;">' +
+          items.map((ph, i) =>
+            '<div style="position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: #ddd6c6;">' +
+              '<img src="' + esc(ph.src) + '" alt="" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;">' +
+              (ph.name ? '<div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 6px; font-size: 12px; background: rgba(28,24,18,0.6); color: #f2ecdc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(ph.name) + '</div>' : '') +
+              '<button data-act="rmPartyPhoto" data-arg="' + i + '" aria-label="Verwijder foto" style="position: absolute; top: 4px; right: 4px; cursor: pointer; width: 24px; height: 24px; border-radius: 999px; border: none; background: rgba(28,24,18,0.7); color: #f2ecdc; font-size: 12px; line-height: 1;">✕</button>' +
+            '</div>').join('') +
+        '</div>' +
+      '</div>'
+    : '';
+
   return '<div class="card">' + top + qrBlock +
     '<button class="btn-dash" data-act="genQr" style="margin-top: 16px;">' +
       (active ? '↻ NIEUW FEEST / NIEUWE QR' : '+ GENEREER QR-CODE') +
     '</button>' +
+    grid +
     '<div class="status" data-status="party" style="margin-top: 8px; min-height: 18px; font-size: 14px; color: #f4a259;"></div>' +
   '</div>';
 }
@@ -1054,6 +1070,7 @@ document.addEventListener('click', async (e) => {
       break;
     }
     case 'rmPhoto': mut((d) => { d.photos.splice(i, 1); }, true); break;
+    case 'rmPartyPhoto': mut((d) => { d.party.photos.splice(i, 1); }, true); break;
     case 'genQr': {
       setStatus('party', 'Bezig…');
       try {
