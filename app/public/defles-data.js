@@ -186,8 +186,8 @@ export function token() {
 
 // Status van een gasten-link: 'ok' (token klopt én niet verlopen),
 // 'expired' (token klopt maar voorbij de vervaltijd) of 'unknown' (geen/ander token).
-export function partyLinkStatus(party, token, now) {
-  if (!party || !party.token || !token || party.token !== token) return 'unknown';
+export function partyLinkStatus(party, guestToken, now) {
+  if (!party || !party.token || !guestToken || party.token !== guestToken) return 'unknown';
   if (!party.expiresAt || now >= party.expiresAt) return 'expired';
   return 'ok';
 }

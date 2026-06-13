@@ -41,4 +41,7 @@ test('usedPhotoNames verzamelt curated én party-foto-bestandsnamen', () => {
 test('usedPhotoNames is robuust bij ontbrekende velden', () => {
   assert.equal(usedPhotoNames({}).size, 0);
   assert.equal(usedPhotoNames({ photos: null, party: null }).size, 0);
+  assert.equal(usedPhotoNames(null).size, 0);
+  assert.equal(usedPhotoNames(undefined).size, 0);
 });
+
