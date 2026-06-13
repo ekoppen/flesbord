@@ -271,6 +271,19 @@ function rateLimited(ip) {
   rsvpHits.set(ip, arr);
   return arr.length > 12; // max 12 inzendingen per minuut per IP
 }
+// Aparte, ruimere limiet voor feest-foto-uploads: alle gasten zitten meestal
+// achter één wifi/NAT en delen dus één IP — een krappe RSVP-limiet zou ze
+// onterecht blokkeren. De bestandsnaam is servergegenereerd en de grootte is
+// begrensd, dus ruimer mag hier.
+const partyHits = new Map(); // ip -> [timestamps]
+function partyRateLimited(ip) {
+  const now = Date.now();
+  const arr = (partyHits.get(ip) || []).filter((t) => now - t < 60000);
+  arr.push(now);
+  partyHits.set(ip, arr);
+  return arr.length > 60; // max 60 foto-uploads per minuut per IP (gedeeld door alle gasten)
+}
+
 function clientIp(req) {
   return (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || 'onbekend';
 }
@@ -572,7 +585,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       if (isPhoto && req.method === 'POST') {
-        if (rateLimited(clientIp(req))) return sendJson(res, 429, { error: 'Even rustig aan — probeer het zo nog eens.' });
+        if (partyRateLimited(clientIp(req))) return sendJson(res, 429, { error: 'Even rustig aan — probeer het zo nog eens.' });
         if (status !== 'ok') return sendJson(res, 410, { error: 'Deze link is verlopen.' });
         const body = await readBody(req, 12 * 1024 * 1024);
         let b; try { b = JSON.parse(body.toString('utf8')); } catch (e) { return sendJson(res, 400, { error: 'ongeldig' }); }
