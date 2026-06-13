@@ -516,6 +516,74 @@ function cardMail() {
   '</div>';
 }
 
+function partyLink(d) {
+  if (!d.party || !d.party.token) return '';
+  const base = (app.mail && app.mail.publicBase) || location.origin;
+  return base.replace(/\/+$/, '') + '/foto/' + d.party.token;
+}
+
+function partyActive(d) {
+  return !!(d.party && d.party.token && d.party.expiresAt > Date.now());
+}
+
+function cardFeest(d) {
+  const link = partyLink(d);
+  const active = partyActive(d);
+  const tot = active
+    ? new Date(d.party.expiresAt).toLocaleString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+    : '';
+  const top =
+    '<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">' +
+      '<div class="card-h">FEEST · FOTO’S VAN GASTEN</div>' +
+      '<span style="font-size: 14px; color: rgba(242,236,220,0.55);">' + (d.party && d.party.photos ? d.party.photos.length : 0) + ' foto’s</span>' +
+    '</div>' +
+    '<p style="font-size: 15px; color: rgba(242,236,220,0.6); margin: 6px 0 16px;">Laat gasten een foto op het bord zetten met hun telefoon. De QR-link verloopt 24 uur na het genereren.</p>';
+
+  const qrBlock = active
+    ? '<div style="display: flex; gap: 18px; align-items: center; flex-wrap: wrap;">' +
+        '<div id="party-qr" style="width: 160px; height: 160px; background: #faf6ec; border-radius: 12px; padding: 8px; display: flex; align-items: center; justify-content: center;"></div>' +
+        '<div style="flex: 1; min-width: 200px;">' +
+          '<div style="font-size: 13px; color: rgba(242,236,220,0.55);">Geldig tot</div>' +
+          '<div style="font-size: 18px; margin-bottom: 10px;">' + esc(tot) + '</div>' +
+          '<div style="word-break: break-all; font-size: 13px; color: rgba(242,236,220,0.7);">' + esc(link) + '</div>' +
+          '<button class="btn-orange" data-act="copyPartyLink" style="margin-top: 10px;">KOPIEER LINK</button>' +
+        '</div>' +
+      '</div>'
+    : '<div style="font-size: 15px; color: rgba(242,236,220,0.5); padding: 8px 0 16px;">Nog geen actief feest — genereer een QR-code om te beginnen.</div>';
+
+  const items = (d.party && d.party.photos) || [];
+  const grid = items.length
+    ? '<div style="border-top: 1px solid rgba(242,236,220,0.12); margin-top: 16px; padding-top: 14px;">' +
+        '<div style="font-size: 13px; color: rgba(242,236,220,0.55); margin-bottom: 8px;">Binnengekomen foto’s — tik ✕ om er één van het bord te halen</div>' +
+        '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; max-height: 320px; overflow-y: auto;">' +
+          items.map((ph, i) =>
+            '<div style="position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: #ddd6c6;">' +
+              '<img src="' + esc(ph.src) + '" alt="" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;">' +
+              (ph.name ? '<div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 6px; font-size: 12px; background: rgba(28,24,18,0.6); color: #f2ecdc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(ph.name) + '</div>' : '') +
+              '<button data-act="rmPartyPhoto" data-arg="' + i + '" aria-label="Verwijder foto" style="position: absolute; top: 4px; right: 4px; cursor: pointer; width: 24px; height: 24px; border-radius: 999px; border: none; background: rgba(28,24,18,0.7); color: #f2ecdc; font-size: 12px; line-height: 1;">✕</button>' +
+            '</div>').join('') +
+        '</div>' +
+      '</div>'
+    : '';
+
+  return '<div class="card">' + top + qrBlock +
+    '<button class="btn-dash" data-act="genQr" style="margin-top: 16px;">' +
+      (active ? '↻ NIEUW FEEST / NIEUWE QR' : '+ GENEREER QR-CODE') +
+    '</button>' +
+    grid +
+    '<div class="status" data-status="party" style="margin-top: 8px; min-height: 18px; font-size: 14px; color: #f4a259;"></div>' +
+  '</div>';
+}
+
+function renderPartyQr() {
+  const el = document.getElementById('party-qr');
+  if (!el || typeof QRCode === 'undefined') return;
+  const link = partyLink(client.get());
+  if (!link) return;
+  el.innerHTML = '';
+  new QRCode(el, { text: link, width: 144, height: 144, correctLevel: QRCode.CorrectLevel.M });
+}
+
 function render() {
   const d = client.get();
   if (!d) return;
@@ -523,11 +591,12 @@ function render() {
     '<div style="display: flex; flex-direction: column; gap: 20px;">' +
       '<div class="row2">' + cardScherm(d) + cardWeer(d) + '</div>' +
       '<div class="row2">' + cardTeksten(d) + cardMuziek(d) + '</div>' +
-      cardTap(d) + cardVoorraad(d) + cardSnacks(d) + cardFotos(d) + cardThema(d) + cardRadio(d) + cardEvents(d) + cardMail() +
+      cardTap(d) + cardVoorraad(d) + cardSnacks(d) + cardFotos(d) + cardThema(d) + cardRadio(d) + cardEvents(d) + cardFeest(d) + cardMail() +
       '<div style="display: flex; justify-content: flex-end; padding: 4px;">' +
         '<button class="btn-ghost" data-act="reset">Terug naar voorbeelddata</button>' +
       '</div>' +
     '</div>';
+  renderPartyQr();
 }
 
 // Re-render met behoud van focus + cursorpositie (voor updates van andere apparaten)
@@ -545,6 +614,7 @@ function renderPreservingFocus() {
       if (selStart != null && el.setSelectionRange) try { el.setSelectionRange(selStart, selStart); } catch (e) { /* type zonder selectie */ }
     }
   }
+  renderPartyQr();
 }
 
 // ---------- statussen ----------
@@ -928,7 +998,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && e.target.dataset && e.target.dataset.local === 'weatherQuery') searchWeather();
 });
 
-document.addEventListener('click', (e) => {
+document.addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-act]');
   if (!btn) return;
   const act = btn.dataset.act;
@@ -1000,6 +1070,24 @@ document.addEventListener('click', (e) => {
       break;
     }
     case 'rmPhoto': mut((d) => { d.photos.splice(i, 1); }, true); break;
+    case 'rmPartyPhoto': mut((d) => { d.party.photos.splice(i, 1); }, true); break;
+    case 'genQr': {
+      setStatus('party', 'Bezig…');
+      try {
+        const r = await fetch('/api/party/new', { method: 'POST' });
+        if (!r.ok) throw new Error('http ' + r.status);
+        setStatus('party', 'Nieuwe QR-code klaar ✓');
+        // de nieuwe state komt via SSE binnen en hertekent de kaart + QR
+      } catch (e) {
+        setStatus('party', 'Genereren mislukt — probeer het opnieuw.');
+      }
+      break;
+    }
+    case 'copyPartyLink': {
+      const link = partyLink(client.get());
+      if (link) { try { await navigator.clipboard.writeText(link); setStatus('party', 'Link gekopieerd ✓'); } catch (e) { setStatus('party', link); } }
+      break;
+    }
     case 'pickFiles': { const f = document.getElementById('file-input'); if (f) f.click(); break; }
     case 'weatherSearch': searchWeather(); break;
     case 'volumioTest': testVolumio(); break;

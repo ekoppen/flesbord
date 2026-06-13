@@ -11,7 +11,7 @@ import fsp from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DEFAULT_STATE, deepMerge, uid } from './public/defles-data.js';
+import { DEFAULT_STATE, deepMerge, uid, token as makeToken, partyLinkStatus, usedPhotoNames } from './public/defles-data.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(ROOT, 'public');
@@ -66,9 +66,7 @@ function schedulePersist() {
 // Gracetijd van 10 min: een upload gebeurt vóór de state-update die ernaar wijst.
 async function prunePhotos() {
   try {
-    const used = new Set((state.photos || [])
-      .map((p) => (p.src || '').startsWith('/photos/') ? path.basename(p.src) : null)
-      .filter(Boolean));
+    const used = usedPhotoNames(state);
     for (const f of await fsp.readdir(PHOTO_DIR)) {
       if (used.has(f)) continue;
       const st = await fsp.stat(path.join(PHOTO_DIR, f)).catch(() => null);
@@ -273,6 +271,19 @@ function rateLimited(ip) {
   rsvpHits.set(ip, arr);
   return arr.length > 12; // max 12 inzendingen per minuut per IP
 }
+// Aparte, ruimere limiet voor feest-foto-uploads: alle gasten zitten meestal
+// achter één wifi/NAT en delen dus één IP — een krappe RSVP-limiet zou ze
+// onterecht blokkeren. De bestandsnaam is servergegenereerd en de grootte is
+// begrensd, dus ruimer mag hier.
+const partyHits = new Map(); // ip -> [timestamps]
+function partyRateLimited(ip) {
+  const now = Date.now();
+  const arr = (partyHits.get(ip) || []).filter((t) => now - t < 60000);
+  arr.push(now);
+  partyHits.set(ip, arr);
+  return arr.length > 60; // max 60 foto-uploads per minuut per IP (gedeeld door alle gasten)
+}
+
 function clientIp(req) {
   return (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || 'onbekend';
 }
@@ -320,7 +331,9 @@ const server = http.createServer(async (req, res) => {
     // Zo blijven beheer/TV/state verborgen, ongeacht de reverse-proxy-config.
     const reqHost = (req.headers.host || '').split(':')[0].toLowerCase();
     if (publicHostCache && reqHost === publicHostCache) {
-      const allowed = p === '/welcome.html' || p === '/e' || p.startsWith('/e/') || p.startsWith('/api/rsvp/') || p === '/api/rsvp';
+      const allowed = p === '/welcome.html' || p === '/e' || p.startsWith('/e/') || p.startsWith('/api/rsvp/') || p === '/api/rsvp'
+        || p === '/foto' || p.startsWith('/foto/')
+        || (p.startsWith('/api/party/') && p !== '/api/party/new');
       if (!allowed) {
         if (req.method === 'GET') return serveFile(res, path.join(PUBLIC_DIR, 'welcome.html'));
         res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -535,6 +548,58 @@ const server = http.createServer(async (req, res) => {
         } catch (e) { failed.push(to); }
       }
       return sendJson(res, 200, { sent, failed });
+    }
+
+    // ---- PUBLIEK + token-afgeschermd: gasten-foto's ----
+    //   GET  /foto, /foto/<token>     -> upload-pagina (statisch)
+    //   POST /api/party/new           -> nieuw feest: vers token, 24 u geldig (beheer-only)
+    //   GET  /api/party/<token>       -> linkstatus (geldig / 410 verlopen)
+    //   POST /api/party/<token>/photo -> gasten-foto toevoegen (rate-limited)
+    if (p === '/foto' || p.startsWith('/foto/')) {
+      return serveFile(res, path.join(PUBLIC_DIR, 'foto', 'index.html'));
+    }
+
+    if (p === '/api/party/new' && req.method === 'POST') {
+      state.party = state.party || { token: null, expiresAt: 0, photos: [] };
+      state.party.token = makeToken();
+      state.party.expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+      schedulePersist();
+      broadcast('');
+      const base = req.headers.host ? 'http://' + req.headers.host : '';
+      return sendJson(res, 200, {
+        token: state.party.token,
+        expiresAt: state.party.expiresAt,
+        url: base.replace(/\/+$/, '') + '/foto/' + state.party.token
+      });
+    }
+
+    if (p.startsWith('/api/party/')) {
+      const rest = p.slice('/api/party/'.length);        // "<token>" of "<token>/photo"
+      const isPhoto = rest.endsWith('/photo');
+      const tok = decodeURIComponent(isPhoto ? rest.slice(0, -('/photo'.length)) : rest);
+      const status = partyLinkStatus(state.party, tok, Date.now());
+
+      if (!isPhoto && req.method === 'GET') {
+        if (status !== 'ok') return sendJson(res, 410, { error: 'verlopen' });
+        return sendJson(res, 200, { geldig: true, expiresAt: state.party.expiresAt });
+      }
+
+      if (isPhoto && req.method === 'POST') {
+        if (partyRateLimited(clientIp(req))) return sendJson(res, 429, { error: 'Even rustig aan — probeer het zo nog eens.' });
+        if (status !== 'ok') return sendJson(res, 410, { error: 'Deze link is verlopen.' });
+        const body = await readBody(req, 12 * 1024 * 1024);
+        let b; try { b = JSON.parse(body.toString('utf8')); } catch (e) { return sendJson(res, 400, { error: 'ongeldig' }); }
+        const m = /^data:image\/(jpeg|png|webp);base64,(.+)$/s.exec(b.dataUrl || '');
+        if (!m) return sendJson(res, 400, { error: 'geen geldige afbeelding' });
+        const ext = m[1] === 'jpeg' ? 'jpg' : m[1];
+        const name = uid() + '.' + ext;
+        await fsp.writeFile(path.join(PHOTO_DIR, name), Buffer.from(m[2], 'base64'));
+        const who = String(b.name || '').trim().slice(0, 40);
+        state.party.photos.push({ id: uid(), src: '/photos/' + name, name: who, ts: Date.now() });
+        schedulePersist();
+        broadcast('');
+        return sendJson(res, 200, { ok: true });
+      }
     }
 
     // Statische bestanden
