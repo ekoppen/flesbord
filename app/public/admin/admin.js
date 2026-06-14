@@ -591,6 +591,7 @@ function cardFeest(d) {
               '<div style="font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(al.title) + (verlopen ? ' · <span style="color: rgba(242,236,220,0.5);">verlopen</span>' : '') + '</div>' +
               '<div style="font-size: 12px; color: rgba(242,236,220,0.5);">' + ((al.photos || []).length) + ' foto’s</div>' +
             '</div>' +
+            (verlopen ? '' : '<div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;"><span style="font-size: 12px; color: rgba(242,236,220,0.6);">op bord</span>' + toggleHtml('albumTv', !!al.showOnTv, 'Op bord').replace('data-act="albumTv"', 'data-act="albumTv" data-arg="' + i + '"') + '</div>') +
             (verlopen ? '' : '<button class="btn-orange" data-act="copyAlbumLink" data-arg="' + i + '" style="font-size: 13px; padding: 6px 12px; flex-shrink: 0;">KOPIEER</button>') +
             '<button class="btn-x" data-act="rmAlbum" data-arg="' + i + '" aria-label="Album verwijderen" style="flex-shrink: 0;">✕</button>' +
           '</div>';
@@ -1139,6 +1140,11 @@ document.addEventListener('click', async (e) => {
       }
       break;
     }
+    case 'albumTv': mut((d) => {
+      const on = !d.albums[i].showOnTv;
+      if (on) d.albums.forEach((a) => { a.showOnTv = false; }); // maar één album tegelijk op het bord
+      d.albums[i].showOnTv = on;
+    }, true); break;
     case 'rmAlbum': {
       if (window.confirm('Dit album verwijderen? De link werkt daarna niet meer.')) mut((d) => { d.albums.splice(i, 1); }, true);
       break;
