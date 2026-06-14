@@ -77,7 +77,8 @@ export const DEFAULT_STATE = {
       inviteList: '', rsvps: []
     }
   ],
-  party: { token: null, expiresAt: 0, photos: [] }
+  party: { token: null, expiresAt: 0, photos: [] },
+  albums: []
 };
 
 // Ingebouwde leeuw (heraldisch, rampant) — opgebouwd uit vormen met een
@@ -202,7 +203,35 @@ export function usedPhotoNames(state) {
   };
   for (const ph of (state && state.photos) || []) add(ph && ph.src);
   for (const ph of (state && state.party && state.party.photos) || []) add(ph && ph.src);
+  for (const al of (state && state.albums) || []) {
+    for (const ph of (al && al.photos) || []) add(ph && ph.src);
+  }
   return names;
+}
+
+// Album opzoeken op publieke token.
+export function albumByToken(albums, token) {
+  if (!token) return null;
+  return (albums || []).find((a) => a && a.token === token) || null;
+}
+
+// Status van een album-link: 'ok' (vóór verval), 'expired', of 'unknown' (geen album).
+export function albumStatus(album, now) {
+  if (!album) return 'unknown';
+  if (!album.expiresAt || now >= album.expiresAt) return 'expired';
+  return 'ok';
+}
+
+// Het meest recente, niet-verlopen album dat als "op bord" gemarkeerd is
+// (showOnTv) — bepaalt welke album-QR het bord toont. null = geen.
+export function activeAlbum(albums, now) {
+  let best = null;
+  for (const a of (albums || [])) {
+    if (!a || !a.showOnTv) continue;
+    if (!a.expiresAt || now >= a.expiresAt) continue;
+    if (!best || (a.createdAt || 0) > (best.createdAt || 0)) best = a;
+  }
+  return best;
 }
 
 // ---- WK-schema via TheSportsDB (gratis sleutel: 123, WK = competitie 4429) ----

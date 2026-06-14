@@ -188,6 +188,7 @@ function midViewsFor(d, now) {
   const views = [];
   if ((d.photos || []).length > 0) views.push('photos');
   if (partyPhotos(d).length > 0) views.push('party');
+  if (D.activeAlbum(d.albums, now.getTime())) views.push('albumqr');
   if (d.theme && d.theme.enabled && deriveWkAll(d, now).next) views.push('wk');
   if (radioOn(d)) views.push('radio');
   return views;
@@ -233,6 +234,7 @@ function panelsFor(d) {
   const panels = [];
   if ((d.photos || []).length > 0) panels.push('photos');
   if (partyPhotos(d).length > 0) panels.push('party');
+  if (D.activeAlbum(d.albums, Date.now())) panels.push('albumqr');
   panels.push('tap');
   if (d.theme && d.theme.enabled) panels.push('theme');
   if ((d.stock || []).length > 0) panels.push('stock');
@@ -435,6 +437,20 @@ function partyPolaroidHtml(d, raster) {
   return polaroidShellHtml(p.src, caption, dots, raster, 'party');
 }
 
+// "Papier op het bord"-poster met de QR naar het album van de zojuist afgesloten
+// avond. De QR komt server-side als SVG, dus dit is gewoon een <img> — geen QR-JS.
+function albumQrPosterHtml(d) {
+  const al = D.activeAlbum(d.albums, Date.now());
+  if (!al) return '';
+  return '<div style="width: 100%; height: 100%; min-height: 0; background: #faf6ec; padding: 26px 38px; box-sizing: border-box; transform: rotate(-0.8deg); box-shadow: 0 10px 30px rgba(0,0,0,0.4); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; position: relative; animation: defles-fade 0.9s ease;">' +
+    '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 58px; line-height: 1; color: #2c3e35; text-align: center;">Foto’s van vanavond</div>' +
+    '<img src="/api/album/' + esc(al.token) + '/qr.svg" alt="" style="width: 230px; height: 230px;">' +
+    '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 30px; color: #c2540a;">scan om ze te bewaren</div>' +
+    '<div style="font-size: 16px; color: rgba(74,67,55,0.55);">30 dagen beschikbaar</div>' +
+    '<div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%) rotate(-2deg); width: 120px; height: 28px; background: rgba(242,236,220,0.45); box-shadow: 0 1px 3px rgba(0,0,0,0.15);"></div>' +
+  '</div>';
+}
+
 // ---------- variant A: vast raster ----------
 
 // WK-poster in het middenvlak: zelfde "papier op het bord"-stijl als de polaroid
@@ -480,6 +496,7 @@ function midSlotHtml(d) {
   if (active === 'wk') return wkPosterHtml(d, now);
   if (active === 'radio') return radioPosterHtml(d);
   if (active === 'party') return partyPolaroidHtml(d, true);
+  if (active === 'albumqr') return albumQrPosterHtml(d);
   return polaroidHtml(d, true);
 }
 
@@ -604,6 +621,10 @@ function mainPanelHtml(d, panel) {
   if (panel === 'party') {
     return '<div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 30px; animation: defles-fade 0.7s ease;">' +
       partyPolaroidHtml(d, false) + '</div>';
+  }
+  if (panel === 'albumqr') {
+    return '<div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 30px; animation: defles-fade 0.7s ease;">' +
+      albumQrPosterHtml(d) + '</div>';
   }
   if (panel === 'tap') {
     const tapRows = deriveTaps(d).map((tp) =>
@@ -732,7 +753,8 @@ function setText(sel, text) {
 
 function applyPhoto() {
   const d = app.data;
-  if (!d || !(d.photos || []).length) return;
+  // 1 of 0 foto's: niets om naar te wisselen — niet opnieuw de fade afvuren (anders knippert het bord).
+  if (!d || (d.photos || []).length <= 1) return;
   const p = d.photos[mod(app.photoIdx, d.photos.length)];
   const img = board.querySelector('[data-photo-img]');
   if (img) {
@@ -750,7 +772,8 @@ function applyParty() {
   const d = app.data;
   if (!d) return;
   const photos = partyPhotos(d);
-  if (!photos.length) return;
+  // 1 of 0 foto's: niets om naar te wisselen — niet opnieuw de fade afvuren (anders knippert het bord).
+  if (photos.length <= 1) return;
   const p = photos[mod(app.photoIdx, photos.length)];
   const img = board.querySelector('[data-party-img]');
   if (img) {

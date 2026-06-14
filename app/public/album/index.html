@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Foto's van de avond — De Fles</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100dvh; background: #1c1812; color: #f2ecdc;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; }
+    .wrap { max-width: 1000px; margin: 0 auto; }
+    header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+    h1 { font-size: 28px; margin: 0; }
+    .sub { color: rgba(242,236,220,0.6); font-size: 15px; margin-top: 4px; }
+    .btn { display: inline-block; padding: 12px 20px; border: none; border-radius: 999px;
+      background: #f4a259; color: #2a241b; font-size: 16px; font-weight: 700; cursor: pointer; text-decoration: none; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .cell { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: #2a241b; }
+    .cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .cell .who { position: absolute; left: 0; right: 0; bottom: 0; padding: 4px 8px; font-size: 13px;
+      background: linear-gradient(transparent, rgba(28,24,18,0.8)); }
+    .center { text-align: center; padding: 60px 20px; }
+    .center .big { font-size: 44px; margin-bottom: 12px; }
+    .hide { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div id="album-view" class="hide">
+      <header>
+        <div>
+          <h1 id="title">Foto's van de avond</h1>
+          <div class="sub" id="when"></div>
+        </div>
+        <a class="btn" id="dl">⬇ Download alle foto's</a>
+      </header>
+      <div class="grid" id="grid"></div>
+    </div>
+
+    <div id="gone-view" class="hide center">
+      <div class="big">⌛</div>
+      <h1>Dit album is niet (meer) beschikbaar</h1>
+      <div class="sub">De link is verlopen of bestaat niet.</div>
+    </div>
+
+    <div id="loading-view" class="center"><div class="sub">Even laden…</div></div>
+  </div>
+
+  <script>
+    const token = location.pathname.replace(/^\/album\/?/, '').replace(/\/+$/, '');
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    function show(view) {
+      for (const v of ['album-view', 'gone-view', 'loading-view']) $(v).classList.add('hide');
+      $(view).classList.remove('hide');
+    }
+
+    (async () => {
+      if (!token) { show('gone-view'); return; }
+      try {
+        const r = await fetch('/api/album/' + encodeURIComponent(token));
+        if (!r.ok) { show('gone-view'); return; }
+        const a = await r.json();
+        $('title').textContent = a.title || "Foto's van de avond";
+        if (a.whenISO) {
+          const d = new Date(a.whenISO);
+          if (!isNaN(d)) $('when').textContent = d.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        }
+        $('dl').href = '/api/album/' + encodeURIComponent(token) + '/zip';
+        $('grid').innerHTML = (a.photos || []).map((p) =>
+          '<a class="cell" href="' + esc(p.src) + '" target="_blank" rel="noopener" download>' +
+            '<img src="' + esc(p.src) + '" alt="" loading="lazy">' +
+            (p.name ? '<div class="who">' + esc(p.name) + '</div>' : '') +
+          '</a>').join('');
+        show('album-view');
+      } catch (e) { show('gone-view'); }
+    })();
+  </script>
+</body>
+</html>

@@ -566,11 +566,46 @@ function cardFeest(d) {
       '</div>'
     : '';
 
+  const eventOpts = '<option value="">— geen koppeling —</option>' +
+    (d.events || []).map((e) => '<option value="' + esc(e.id) + '">' + esc(e.title) + '</option>').join('');
+  const closeBlock = items.length
+    ? '<div style="border-top: 1px solid rgba(242,236,220,0.12); margin-top: 14px; padding-top: 14px;">' +
+        '<div style="font-size: 13px; color: rgba(242,236,220,0.55); margin-bottom: 8px;">Avond afsluiten maakt een album van de foto’s hierboven en maakt het bord schoon. Koppel je een event, dan krijgen de aanmelders het album per mail.</div>' +
+        '<select id="album-event" style="width: 100%; padding: 9px 10px; border-radius: 8px; border: none; background: #faf6ec; color: #2a241b; font-size: 15px; margin-bottom: 8px;">' + eventOpts + '</select>' +
+        '<button class="btn-orange" data-act="closeParty" style="width: 100%;">AVOND AFSLUITEN &amp; ALBUM MAKEN</button>' +
+      '</div>'
+    : '';
+
+  const albums = d.albums || [];
+  const albumsBlock = albums.length
+    ? '<div style="border-top: 1px solid rgba(242,236,220,0.12); margin-top: 16px; padding-top: 14px;">' +
+        '<div style="font-size: 13px; color: rgba(242,236,220,0.55); margin-bottom: 10px;">Albums</div>' +
+        albums.map((al, i) => {
+          const verlopen = D.albumStatus(al, Date.now()) !== 'ok';
+          const thumb = verlopen
+            ? '<div style="width: 56px; height: 56px; border-radius: 8px; background: rgba(242,236,220,0.08); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">⌛</div>'
+            : '<img src="/api/album/' + esc(al.token) + '/qr.svg" alt="" style="width: 56px; height: 56px; background: #faf6ec; border-radius: 8px; padding: 3px; flex-shrink: 0;">';
+          return '<div style="display: flex; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(242,236,220,0.08);">' +
+            thumb +
+            '<div style="flex: 1; min-width: 0;">' +
+              '<div style="font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(al.title) + (verlopen ? ' · <span style="color: rgba(242,236,220,0.5);">verlopen</span>' : '') + '</div>' +
+              '<div style="font-size: 12px; color: rgba(242,236,220,0.5);">' + ((al.photos || []).length) + ' foto’s</div>' +
+            '</div>' +
+            (verlopen ? '' : '<div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;"><span style="font-size: 12px; color: rgba(242,236,220,0.6);">op bord</span>' + toggleHtml('albumTv', !!al.showOnTv, 'Op bord').replace('data-act="albumTv"', 'data-act="albumTv" data-arg="' + i + '"') + '</div>') +
+            (verlopen ? '' : '<button class="btn-orange" data-act="copyAlbumLink" data-arg="' + i + '" style="font-size: 13px; padding: 6px 12px; flex-shrink: 0;">KOPIEER</button>') +
+            '<button class="btn-x" data-act="rmAlbum" data-arg="' + i + '" aria-label="Album verwijderen" style="flex-shrink: 0;">✕</button>' +
+          '</div>';
+        }).join('') +
+      '</div>'
+    : '';
+
   return '<div class="card">' + top + qrBlock +
     '<button class="btn-dash" data-act="genQr" style="margin-top: 16px;">' +
       (active ? '↻ NIEUW FEEST / NIEUWE QR' : '+ GENEREER QR-CODE') +
     '</button>' +
     grid +
+    closeBlock +
+    albumsBlock +
     '<div class="status" data-status="party" style="margin-top: 8px; min-height: 18px; font-size: 14px; color: #f4a259;"></div>' +
   '</div>';
 }
@@ -1081,6 +1116,37 @@ document.addEventListener('click', async (e) => {
       } catch (e) {
         setStatus('party', 'Genereren mislukt — probeer het opnieuw.');
       }
+      break;
+    }
+    case 'closeParty': {
+      const sel = document.getElementById('album-event');
+      const eventId = sel ? sel.value : '';
+      setStatus('party', 'Album maken…');
+      try {
+        const r = await fetch('/api/party/close', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventId }) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.error || ('http ' + r.status));
+        setStatus('party', 'Album gemaakt' + (j.emailed ? ' · ' + j.emailed + ' mail(s) verstuurd' : '') + ' ✓');
+      } catch (e) {
+        setStatus('party', 'Afsluiten mislukt — ' + e.message);
+      }
+      break;
+    }
+    case 'copyAlbumLink': {
+      const al = (client.get().albums || [])[i];
+      if (al) {
+        const link = ((app.mail && app.mail.publicBase) || location.origin).replace(/\/+$/, '') + '/album/' + al.token;
+        try { await navigator.clipboard.writeText(link); setStatus('party', 'Album-link gekopieerd ✓'); } catch (e) { setStatus('party', link); }
+      }
+      break;
+    }
+    case 'albumTv': mut((d) => {
+      const on = !d.albums[i].showOnTv;
+      if (on) d.albums.forEach((a) => { a.showOnTv = false; }); // maar één album tegelijk op het bord
+      d.albums[i].showOnTv = on;
+    }, true); break;
+    case 'rmAlbum': {
+      if (window.confirm('Dit album verwijderen? De link werkt daarna niet meer.')) mut((d) => { d.albums.splice(i, 1); }, true);
       break;
     }
     case 'copyPartyLink': {

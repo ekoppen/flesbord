@@ -25,17 +25,19 @@ test('partyLinkStatus: unknown bij ontbrekend of ander token', () => {
   assert.equal(partyLinkStatus(undefined, 'abc', 500), 'unknown');
 });
 
-test('usedPhotoNames verzamelt curated én party-foto-bestandsnamen', () => {
+test('usedPhotoNames verzamelt curated, party én album-foto-bestandsnamen', () => {
   const state = {
     photos: [{ src: '/photos/aaa.jpg' }, { src: 'https://picsum.photos/x' }],
-    party: { photos: [{ src: '/photos/bbb.webp' }, { src: '/photos/ccc.png' }] }
+    party: { photos: [{ src: '/photos/bbb.webp' }] },
+    albums: [{ photos: [{ src: '/photos/ccc.png' }, { src: '/photos/ddd.jpg' }] }]
   };
   const names = usedPhotoNames(state);
   assert.ok(names.has('aaa.jpg'));
   assert.ok(names.has('bbb.webp'));
   assert.ok(names.has('ccc.png'));
-  assert.equal(names.has('x'), false); // externe URL telt niet mee
-  assert.equal(names.size, 3);
+  assert.ok(names.has('ddd.jpg'));
+  assert.equal(names.has('x'), false);
+  assert.equal(names.size, 4);
 });
 
 test('usedPhotoNames is robuust bij ontbrekende velden', () => {

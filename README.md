@@ -107,6 +107,15 @@ live op het bord in de view "Foto's van het feest". De QR-link verloopt 24 uur
 na het genereren; geüploade foto's blijven bewaard in `data/photos/`. Met de ✕
 naast een foto haal je 'm direct van het bord.
 
+### Avond-album
+
+Na afloop tik je in het beheer onder **FEEST · FOTO'S VAN GASTEN** op **"Avond
+afsluiten & album maken"**. De foto's van die avond worden een album, het bord
+wordt schoon, en het bord toont een **"Foto's van vanavond"**-QR waarmee gasten
+het album openen (`/album/<token>`): bekijken, los opslaan of **alles als zip**
+downloaden. Koppel je het album aan een RSVP-event, dan krijgen de aanmelders de
+link ook per mail. Album-links zijn 30 dagen geldig; met ✕ verwijder je een album.
+
 ## State & synchronisatie
 In het prototype delen TV en beheer één `localStorage`-key (`defles-state-v1`); de TV pollt elke 2 s + luistert naar `storage`-events. **In productie moet dit een gedeelde backend worden** (de Chromecast en de telefoon zijn aparte apparaten): bv. een mini-server (Raspberry Pi/NAS) met een JSON-state-endpoint + websocket/SSE-push, of een gehoste KV-store. De TV-pagina cast je via een Chromecast (tab-cast of als ontvanger-app/kiosk).
 
