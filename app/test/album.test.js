@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_STATE, albumByToken, albumStatus, freshAlbum } from '../public/defles-data.js';
+import { DEFAULT_STATE, albumByToken, albumStatus, activeAlbum } from '../public/defles-data.js';
 
 const mk = (over) => Object.assign({ id: 'a', token: 't', title: 'x', whenISO: '', createdAt: 1000, expiresAt: 5000, eventId: '', photos: [] }, over);
 
@@ -24,13 +24,14 @@ test('albumStatus: ok vóór verval, expired erna, unknown bij null', () => {
   assert.equal(albumStatus(null, 1), 'unknown');
 });
 
-test('freshAlbum: nieuwste binnen het venster én niet verlopen', () => {
+test('activeAlbum: nieuwste niet-verlopen album met showOnTv', () => {
   const albums = [
-    mk({ id: 'oud', createdAt: 1000, expiresAt: 9_999_999 }),
-    mk({ id: 'nieuw', createdAt: 4000, expiresAt: 9_999_999 })
+    mk({ id: 'a', createdAt: 1000, expiresAt: 9_999_999, showOnTv: true }),
+    mk({ id: 'b', createdAt: 4000, expiresAt: 9_999_999, showOnTv: true }),
+    mk({ id: 'c', createdAt: 5000, expiresAt: 9_999_999, showOnTv: false })
   ];
-  assert.equal(freshAlbum(albums, 5000, 2000).id, 'nieuw');
-  assert.equal(freshAlbum(albums, 8000, 2000), null);
-  assert.equal(freshAlbum([mk({ createdAt: 4000, expiresAt: 4500 })], 5000, 2000), null);
-  assert.equal(freshAlbum([], 5000, 2000), null);
+  assert.equal(activeAlbum(albums, 5000).id, 'b');                 // nieuwste mét showOnTv (c staat uit)
+  assert.equal(activeAlbum([mk({ showOnTv: false })], 5000), null);
+  assert.equal(activeAlbum([mk({ createdAt: 1, expiresAt: 2, showOnTv: true })], 5000), null); // verlopen
+  assert.equal(activeAlbum([], 5000), null);
 });

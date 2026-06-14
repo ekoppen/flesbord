@@ -574,9 +574,11 @@ const server = http.createServer(async (req, res) => {
         createdAt: now,
         expiresAt: now + ALBUM_TTL_MS,
         eventId: ev ? ev.id : '',
+        showOnTv: true,
         photos: state.party.photos.slice()
       };
       state.albums = state.albums || [];
+      for (const a of state.albums) a.showOnTv = false; // nieuw feest = enige actieve QR op het bord
       state.albums.push(album);
       state.party = { token: null, expiresAt: 0, photos: [] };
       schedulePersist();

@@ -222,15 +222,14 @@ export function albumStatus(album, now) {
   return 'ok';
 }
 
-// Het meest recente album dat nog "vers" is (binnen windowMs ná createdAt) én niet
-// verlopen — gebruikt door het bord voor de "Foto's van vanavond"-QR.
-export function freshAlbum(albums, now, windowMs) {
+// Het meest recente, niet-verlopen album dat als "op bord" gemarkeerd is
+// (showOnTv) — bepaalt welke album-QR het bord toont. null = geen.
+export function activeAlbum(albums, now) {
   let best = null;
   for (const a of (albums || [])) {
-    if (!a || !a.createdAt) continue;
-    if (now - a.createdAt >= windowMs) continue;
+    if (!a || !a.showOnTv) continue;
     if (!a.expiresAt || now >= a.expiresAt) continue;
-    if (!best || a.createdAt > best.createdAt) best = a;
+    if (!best || (a.createdAt || 0) > (best.createdAt || 0)) best = a;
   }
   return best;
 }

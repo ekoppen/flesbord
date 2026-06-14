@@ -188,7 +188,7 @@ function midViewsFor(d, now) {
   const views = [];
   if ((d.photos || []).length > 0) views.push('photos');
   if (partyPhotos(d).length > 0) views.push('party');
-  if (D.freshAlbum(d.albums, now.getTime(), 48 * 60 * 60 * 1000)) views.push('albumqr');
+  if (D.activeAlbum(d.albums, now.getTime())) views.push('albumqr');
   if (d.theme && d.theme.enabled && deriveWkAll(d, now).next) views.push('wk');
   if (radioOn(d)) views.push('radio');
   return views;
@@ -234,7 +234,7 @@ function panelsFor(d) {
   const panels = [];
   if ((d.photos || []).length > 0) panels.push('photos');
   if (partyPhotos(d).length > 0) panels.push('party');
-  if (D.freshAlbum(d.albums, Date.now(), 48 * 60 * 60 * 1000)) panels.push('albumqr');
+  if (D.activeAlbum(d.albums, Date.now())) panels.push('albumqr');
   panels.push('tap');
   if (d.theme && d.theme.enabled) panels.push('theme');
   if ((d.stock || []).length > 0) panels.push('stock');
@@ -440,7 +440,7 @@ function partyPolaroidHtml(d, raster) {
 // "Papier op het bord"-poster met de QR naar het album van de zojuist afgesloten
 // avond. De QR komt server-side als SVG, dus dit is gewoon een <img> — geen QR-JS.
 function albumQrPosterHtml(d) {
-  const al = D.freshAlbum(d.albums, Date.now(), 48 * 60 * 60 * 1000);
+  const al = D.activeAlbum(d.albums, Date.now());
   if (!al) return '';
   return '<div style="width: 100%; height: 100%; min-height: 0; background: #faf6ec; padding: 26px 38px; box-sizing: border-box; transform: rotate(-0.8deg); box-shadow: 0 10px 30px rgba(0,0,0,0.4); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; position: relative; animation: defles-fade 0.9s ease;">' +
     '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 58px; line-height: 1; color: #2c3e35; text-align: center;">Foto’s van vanavond</div>' +
