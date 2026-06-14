@@ -753,7 +753,8 @@ function setText(sel, text) {
 
 function applyPhoto() {
   const d = app.data;
-  if (!d || !(d.photos || []).length) return;
+  // 1 of 0 foto's: niets om naar te wisselen — niet opnieuw de fade afvuren (anders knippert het bord).
+  if (!d || (d.photos || []).length <= 1) return;
   const p = d.photos[mod(app.photoIdx, d.photos.length)];
   const img = board.querySelector('[data-photo-img]');
   if (img) {
@@ -771,7 +772,8 @@ function applyParty() {
   const d = app.data;
   if (!d) return;
   const photos = partyPhotos(d);
-  if (!photos.length) return;
+  // 1 of 0 foto's: niets om naar te wisselen — niet opnieuw de fade afvuren (anders knippert het bord).
+  if (photos.length <= 1) return;
   const p = photos[mod(app.photoIdx, photos.length)];
   const img = board.querySelector('[data-party-img]');
   if (img) {
