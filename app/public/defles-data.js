@@ -7,6 +7,7 @@ export const DEFAULT_STATE = {
   panelMode: 'auto', // 'auto' (vanzelf wisselen) | 'handmatig' (alleen met de afstandsbediening)
   welkom: 'welkom in',
   mededeling: 'Zondag 14 juni · Nederland – Japan · 22:00 op groot scherm',
+  mededelingStijl: 'kader', // 'kader' (omlijnd) | 'kaartje' (oranje toegangskaart)
   showMusic: true,
   music: { mode: 'handmatig', source: 'Spotify', track: 'Viva Hollandia', artist: 'Wolter Kroes', volumioHost: 'volumio.local', spotifyClientId: '' },
   // Spotify-tokens horen in de gedeelde state: het beheerscherm logt in, de TV

@@ -83,11 +83,23 @@ function cardWeer(d) {
 }
 
 function cardTeksten(d) {
+  const stijl = d.mededelingStijl || 'kader';
+  const stijlPills = [
+    { key: 'kader', label: 'KADER' },
+    { key: 'kaartje', label: 'ORANJE KAARTJE' }
+  ].map((s) => {
+    const on = stijl === s.key;
+    return '<button data-act="mededelingStijl" data-arg="' + s.key + '" style="flex: 1; cursor: pointer; background: ' +
+      (on ? 'rgba(244,162,89,0.14)' : 'transparent') + '; border: 2px solid ' + (on ? '#f4a259' : 'rgba(242,236,220,0.3)') +
+      '; border-radius: 999px; padding: 7px 10px; font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 21px; letter-spacing: 0.05em; color: #f2ecdc;">' + s.label + '</button>';
+  }).join('');
   return '<div class="card"><div class="card-h" style="margin-bottom: 14px;">TEKSTEN</div>' +
     '<div class="lbl">WELKOMSTREGEL (boven het logo)</div>' +
     '<input class="in" data-bind="welkom" value="' + esc(d.welkom) + '" style="width: 100%;">' +
     '<div class="lbl" style="margin: 16px 0 6px;">MEDEDELING (leeg = verbergen)</div>' +
     '<textarea class="in" data-bind="mededeling" rows="3" style="width: 100%; resize: vertical;">' + esc(d.mededeling) + '</textarea>' +
+    '<div class="lbl" style="margin: 16px 0 6px;">STIJL VAN DE MEDEDELING</div>' +
+    '<div style="display: flex; gap: 8px;">' + stijlPills + '</div>' +
   '</div>';
 }
 
@@ -1042,6 +1054,7 @@ document.addEventListener('click', async (e) => {
   switch (act) {
     case 'variant': mut((d) => { d.variant = arg; }, true); break;
     case 'panelMode': mut((d) => { d.panelMode = arg; }, true); break;
+    case 'mededelingStijl': mut((d) => { d.mededelingStijl = arg; }, true); break;
     case 'mode': mut((d) => { d.music.mode = arg; }, true); break;
     case 'toggleMusic': mut((d) => { d.showMusic = !d.showMusic; }, true); break;
     case 'toggleTheme': mut((d) => { d.theme.enabled = !d.theme.enabled; }, true); break;
