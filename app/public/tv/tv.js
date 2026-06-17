@@ -348,11 +348,11 @@ function musicPillHtml(d, big) {
 // Mededeling als oranje "toegangskaart": vol oranje met een gestippelde
 // perforatie-scheiding, in dezelfde stijl als de aanmeldingen-sticker.
 function mededelingTicketHtml(text, raster) {
-  const wrap = raster ? 'max-width: 540px; transform: rotate(-1.2deg);' : 'flex: 1; min-width: 0; transform: rotate(-0.6deg);';
-  const labelSize = raster ? 22 : 28;
-  const textSize = raster ? 30 : 34;
-  const textClip = raster ? 'text-wrap: pretty; max-height: 64px; overflow: hidden;' : 'overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
-  return '<div style="' + wrap + ' background: #f4a259; color: #2c3e35; border-radius: 18px; padding: ' + (raster ? '10px 22px' : '12px 30px') + '; display: flex; align-items: center; gap: ' + (raster ? '16px' : '24px') + '; box-shadow: 0 10px 26px rgba(0,0,0,0.4); box-sizing: border-box;">' +
+  const wrap = raster ? 'max-width: 560px; transform: rotate(-1.2deg);' : 'flex: 1; min-width: 0; transform: rotate(-0.6deg);';
+  const labelSize = raster ? 26 : 34;
+  const textSize = raster ? 38 : 48;
+  const textClip = raster ? 'text-wrap: pretty; max-height: 100px; overflow: hidden;' : 'overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+  return '<div style="' + wrap + ' background: #f4a259; color: #2c3e35; border-radius: 20px; padding: ' + (raster ? '18px 30px' : '22px 38px') + '; display: flex; align-items: center; gap: ' + (raster ? '20px' : '28px') + '; box-shadow: 0 12px 30px rgba(0,0,0,0.42); box-sizing: border-box;">' +
     '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: ' + labelSize + 'px; color: rgba(44,62,53,0.75); flex-shrink: 0; transform: rotate(-3deg);">let op!</div>' +
     '<div style="width: 2px; align-self: stretch; border-left: 2px dashed rgba(44,62,53,0.35); flex-shrink: 0;"></div>' +
     '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: ' + textSize + 'px; line-height: 1.05; color: #2c3e35; min-width: 0; ' + textClip + '">' + esc(text) + '</div>' +
