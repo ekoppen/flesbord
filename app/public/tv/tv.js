@@ -75,12 +75,15 @@ function deriveTheme(d, now) {
     const dMin = Math.floor((diff % 3600000) / 60000);
     countdownStr = dDays > 0 ? 'over ' + dDays + 'd ' + dHrs + 'u' : (dHrs > 0 ? 'over ' + dHrs + 'u ' + dMin + 'm' : 'over ' + dMin + ' min');
   }
-  const matchRows = parsed.slice(0, 4).map((m) => ({
+  // Programmalijst rolt mee met de tijd (laatste uitslag + komende) i.p.v. vast
+  // op de eerste wedstrijd te blijven hangen.
+  const matchRows = D.scheduleWindow(theme.matches || [], now.getTime(), 4).map((m) => ({
     when: D.formatMatchDateNL(m.date),
     teams: m.home + ' – ' + m.away,
     right: m.score ? m.score : m.time
   }));
-  const standingRows = (theme.standings || []).map((s, i) => ({ pos: i + 1, team: s.team, g: s.g, pts: s.pts }));
+  // Stand live uit de uitslagen berekenen i.p.v. te leunen op de (hier vaak lege) API-stand.
+  const standingRows = D.computeStandings(theme.matches || [], theme.standings || []).map((s, i) => ({ pos: i + 1, team: s.team, g: s.g, pts: s.pts }));
   return {
     enabled: !!theme.enabled,
     titleCaps: (theme.title || '').toUpperCase(),

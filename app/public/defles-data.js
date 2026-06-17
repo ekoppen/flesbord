@@ -176,6 +176,55 @@ export function formatMatchDateNL(dateStr) {
   return new Intl.DateTimeFormat('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' }).format(d).replace(/\./g, '');
 }
 
+// Lees een scorestring ("2 – 2" / "2-2" / "2:2") als [thuis, uit], of null.
+export function parseScore(score) {
+  const m = /(\d+)\s*[-–:]\s*(\d+)/.exec(String(score || ''));
+  return m ? [Number(m[1]), Number(m[2])] : null;
+}
+
+// Bereken een groepsstand uit de wedstrijden mét uitslag. `teams` is de
+// (optionele) seedlijst die altijd in de tabel hoort en de volgorde bij gelijke
+// stand bepaalt. Retour: gesorteerde [{ team, g, pts }] — g = gespeeld, pts = punten.
+export function computeStandings(matches, teams) {
+  const tbl = new Map();
+  let order = 0;
+  const ensure = (raw) => {
+    const name = raw && raw.team ? raw.team : raw;
+    if (!name) return null;
+    if (!tbl.has(name)) tbl.set(name, { team: name, idx: order++, g: 0, gf: 0, ga: 0, pts: 0 });
+    return tbl.get(name);
+  };
+  for (const t of (teams || [])) ensure(t);
+  for (const m of (matches || [])) {
+    const sc = parseScore(m && m.score);
+    if (!sc) continue;
+    const home = ensure(m.home), away = ensure(m.away);
+    if (!home || !away) continue;
+    const [hg, ag] = sc;
+    home.g++; away.g++;
+    home.gf += hg; home.ga += ag; away.gf += ag; away.ga += hg;
+    if (hg > ag) home.pts += 3;
+    else if (hg < ag) away.pts += 3;
+    else { home.pts += 1; away.pts += 1; }
+  }
+  return [...tbl.values()]
+    .sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga) || b.gf - a.gf || a.idx - b.idx)
+    .map((r) => ({ team: r.team, g: r.g, pts: r.pts }));
+}
+
+// De wedstrijden die "nu" relevant zijn: de laatste uitslag + de komende,
+// chronologisch — zodat de programmalijst meeschuift met de tijd i.p.v. vast op
+// de eerste wedstrijd te blijven hangen. `now` in ms. Een wedstrijd is 'klaar'
+// als hij een score heeft of meer dan 3 uur geleden begon.
+export function scheduleWindow(matches, now, count) {
+  const parsed = (matches || []).map((m) => ({ m, t: new Date(m.date + 'T' + (m.time || '12:00') + ':00').getTime() }));
+  parsed.sort((a, b) => a.t - b.t);
+  const done = (x) => !!x.m.score || (!isNaN(x.t) && x.t < now - 3 * 3600000);
+  const recent = parsed.filter(done);
+  const upcoming = parsed.filter((x) => !done(x));
+  return [...recent.slice(-1), ...upcoming].slice(0, count || 4).map((x) => x.m);
+}
+
 export function uid() { return 'x' + Math.random().toString(36).slice(2, 9); }
 
 // Lange, niet-raadbare token voor de geheime RSVP-link van een evenement.
