@@ -345,6 +345,20 @@ function musicPillHtml(d, big) {
       '</div></div></div>';
 }
 
+// Mededeling als oranje "toegangskaart": vol oranje met een gestippelde
+// perforatie-scheiding, in dezelfde stijl als de aanmeldingen-sticker.
+function mededelingTicketHtml(text, raster) {
+  const wrap = raster ? 'max-width: 540px; transform: rotate(-1.2deg);' : 'flex: 1; min-width: 0; transform: rotate(-0.6deg);';
+  const labelSize = raster ? 22 : 28;
+  const textSize = raster ? 30 : 34;
+  const textClip = raster ? 'text-wrap: pretty; max-height: 64px; overflow: hidden;' : 'overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+  return '<div style="' + wrap + ' background: #f4a259; color: #2c3e35; border-radius: 18px; padding: ' + (raster ? '10px 22px' : '12px 30px') + '; display: flex; align-items: center; gap: ' + (raster ? '16px' : '24px') + '; box-shadow: 0 10px 26px rgba(0,0,0,0.4); box-sizing: border-box;">' +
+    '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: ' + labelSize + 'px; color: rgba(44,62,53,0.75); flex-shrink: 0; transform: rotate(-3deg);">let op!</div>' +
+    '<div style="width: 2px; align-self: stretch; border-left: 2px dashed rgba(44,62,53,0.35); flex-shrink: 0;"></div>' +
+    '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: ' + textSize + 'px; line-height: 1.05; color: #2c3e35; min-width: 0; ' + textClip + '">' + esc(text) + '</div>' +
+  '</div>';
+}
+
 function topBarHtml(d, raster) {
   const now = new Date();
   const divider = '<div style="width: 2px; align-self: stretch; border-left: 2px dashed rgba(242,236,220,0.3);"></div>';
@@ -369,10 +383,12 @@ function topBarHtml(d, raster) {
       '</div>';
   const mededeling = (d.mededeling || '').trim();
   const mededelingTop = raster && mededeling
-    ? '<div style="border: 3px double rgba(244,162,89,0.75); border-radius: 12px; padding: 10px 20px; display: flex; align-items: center; gap: 16px; min-width: 0; max-width: 540px; transform: rotate(0.3deg);">' +
-        '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 24px; color: #f4a259; flex-shrink: 0; transform: rotate(-2deg);">let op!</div>' +
-        '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 30px; line-height: 1.05; color: #f2ecdc; text-wrap: pretty; max-height: 64px; overflow: hidden;">' + esc(mededeling) + '</div>' +
-      '</div>'
+    ? (d.mededelingStijl === 'kaartje'
+        ? mededelingTicketHtml(mededeling, true)
+        : '<div style="border: 3px double rgba(244,162,89,0.75); border-radius: 12px; padding: 10px 20px; display: flex; align-items: center; gap: 16px; min-width: 0; max-width: 540px; transform: rotate(0.3deg);">' +
+            '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 24px; color: #f4a259; flex-shrink: 0; transform: rotate(-2deg);">let op!</div>' +
+            '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 30px; line-height: 1.05; color: #f2ecdc; text-wrap: pretty; max-height: 64px; overflow: hidden;">' + esc(mededeling) + '</div>' +
+          '</div>')
     : '';
   // Middenstuk: de aanmeldingen-badge staat op de plek van "let op!"; is er geen
   // evenement, dan toont dat plekje de mededeling (raster).
@@ -724,10 +740,12 @@ function roterendHtml(d) {
   const active = panels[mod(app.panelIdx, panels.length)];
   const mededeling = (d.mededeling || '').trim();
   const mededelingBlock = mededeling
-    ? '<div style="flex: 1; min-width: 0; border: 3px double rgba(244,162,89,0.75); border-radius: 12px; padding: 12px 26px; display: flex; align-items: center; gap: 22px;">' +
-        '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 27px; color: #f4a259; flex-shrink: 0; transform: rotate(-2deg);">let op!</div>' +
-        '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 33px; color: #f2ecdc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(mededeling) + '</div>' +
-      '</div>'
+    ? (d.mededelingStijl === 'kaartje'
+        ? mededelingTicketHtml(mededeling, false)
+        : '<div style="flex: 1; min-width: 0; border: 3px double rgba(244,162,89,0.75); border-radius: 12px; padding: 12px 26px; display: flex; align-items: center; gap: 22px;">' +
+            '<div style="font-family: \'Shadows Into Light Two\', cursive; font-size: 27px; color: #f4a259; flex-shrink: 0; transform: rotate(-2deg);">let op!</div>' +
+            '<div style="font-family: \'Amatic SC\', cursive; font-weight: 700; font-size: 33px; color: #f2ecdc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + esc(mededeling) + '</div>' +
+          '</div>')
     : '<div style="flex: 1;"></div>';
   return '<div data-screen-label="TV — Krijtbord roterend" style="position: absolute; inset: 0; display: flex; flex-direction: column; gap: 22px; padding: 40px 50px; box-sizing: border-box;">' +
     topBarHtml(d, false) +
